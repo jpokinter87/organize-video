@@ -59,6 +59,54 @@ PRIORITY_GENRES: Set[str] = {
     'Western', 'Historique', 'SF', 'Films pour enfants', 'Comédie dramatique'
 }
 
+# Supported genres by the video library
+SUPPORTED_GENRES: Set[str] = {
+    "Action & Aventure", "Animation", "Comédie", "Comédie dramatique",
+    "Policier", "Drame", "Films pour enfants", "Fantastique",
+    "Historique", "Horreur", "SF", "Thriller", "Western",
+    "Guerre & espionnage"
+}
+
+# Mapping of unsupported genres to supported ones
+GENRE_MAPPING: Dict[str, str] = {
+    # Romance
+    'romance': 'Drame',
+    'romantic': 'Drame',
+    'romantique': 'Drame',
+    # Téléfilm
+    'téléfilm': 'Drame',
+    'telefilm': 'Drame',
+    'tv movie': 'Drame',
+    'tv-movie': 'Drame',
+    # Musique
+    'music': 'Drame',
+    'musical': 'Drame',
+    'musique': 'Drame',
+    # Crime
+    'crime': 'Policier',
+    'criminal': 'Policier',
+    # Mystery
+    'mystery': 'Thriller',
+    'mystère': 'Thriller',
+    'mysterious': 'Thriller',
+    # Adventure
+    'adventure': 'Action & Aventure',
+    'aventure': 'Action & Aventure',
+    # Family
+    'family': 'Films pour enfants',
+    'famille': 'Films pour enfants',
+    # Biography
+    'biography': 'Drame',
+    'biographical': 'Drame',
+    'biographie': 'Drame',
+    # Sport
+    'sport': 'Drame',
+    'sports': 'Drame',
+    # News
+    'news': 'Drame',
+    'actualités': 'Drame',
+}
+
 # Cache expiration time in seconds (24 hours)
 CACHE_EXPIRATION_SECONDS: int = 86400
 
