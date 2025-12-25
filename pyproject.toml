@@ -5,6 +5,8 @@ description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
     "loguru>=0.7.3",
+    "requests>=2.32.5",
+    "tvdb-api>=3.1.0",
 ]
 
 [dependency-groups]
