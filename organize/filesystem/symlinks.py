@@ -1,0 +1,84 @@
+"""Symlink operations for video organization."""
+
+from pathlib import Path
+
+from loguru import logger
+
+
+def create_symlink(source: Path, destination: Path, dry_run: bool = False) -> None:
+    """
+    Create a symbolic link (or simulate if dry_run).
+
+    Args:
+        source: Source file path.
+        destination: Destination symlink path.
+        dry_run: If True, only simulate the operation.
+    """
+    if dry_run:
+        logger.debug(f'SIMULATION - Symlink: {source} -> {destination}')
+        return
+
+    try:
+        # Resolve source if it's already a symlink
+        if source.is_symlink():
+            source = source.resolve()
+
+        # Remove existing destination
+        if destination.exists() or destination.is_symlink():
+            destination.unlink()
+
+        destination.symlink_to(source)
+        logger.debug(f'Symlink created: {source} -> {destination}')
+
+    except Exception as e:
+        logger.warning(f"Error creating symlink {source} -> {destination}: {e}")
+
+
+def verify_symlinks(directory: Path) -> None:
+    """
+    Verify symlink integrity and remove broken links.
+
+    Args:
+        directory: Directory to scan for symlinks.
+    """
+    broken_links = []
+
+    for item in directory.rglob('*'):
+        if item.is_symlink():
+            try:
+                # Try to resolve the link
+                item.resolve(strict=True)
+            except (FileNotFoundError, OSError):
+                broken_links.append(item)
+
+    if broken_links:
+        logger.warning(f"Broken symlinks detected: {len(broken_links)}")
+        for link in broken_links:
+            logger.warning(f"Broken link: {link}")
+            try:
+                link.unlink()
+                logger.info(f"Broken link removed: {link}")
+            except Exception as e:
+                logger.error(f"Could not remove broken link {link}: {e}")
+    else:
+        logger.info("All symlinks are valid")
+
+
+def is_valid_symlink(path: Path) -> bool:
+    """
+    Check if path is a valid, non-broken symlink.
+
+    Args:
+        path: Path to check.
+
+    Returns:
+        True if path is a valid symlink, False otherwise.
+    """
+    if not path.is_symlink():
+        return False
+
+    try:
+        path.resolve(strict=True)
+        return True
+    except (FileNotFoundError, OSError):
+        return False
