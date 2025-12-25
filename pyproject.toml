@@ -7,6 +7,7 @@ dependencies = [
     "guessit>=3.8.0",
     "loguru>=0.7.3",
     "requests>=2.32.5",
+    "rich>=14.2.0",
     "tvdb-api>=3.1.0",
 ]
 
