@@ -18,10 +18,15 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
+    "babelfish>=0.6.1",
     "guessit>=3.8.0",
     "loguru>=0.7.3",
+    "pymediainfo>=7.0.1",
+    "python-dotenv>=1.2.1",
+    "rapidfuzz>=3.14.3",
     "requests>=2.32.5",
     "rich>=14.2.0",
+    "tqdm>=4.67.1",
     "tvdb-api>=3.1.0",
 ]
 
