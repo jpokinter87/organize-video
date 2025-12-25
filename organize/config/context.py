@@ -23,7 +23,10 @@ class ExecutionContext:
         search_dir: Directory to search for videos.
         storage_dir: Directory for final storage.
         symlinks_dir: Directory for symlinks.
-        temp_symlinks_dir: Directory for temporary symlinks.
+        output_dir: Directory for temporary output/symlinks.
+        days_to_process: Number of days of files to process.
+        debug: If True, enable debug mode.
+        tag: Debug tag to search for.
     """
 
     dry_run: bool = False
@@ -31,7 +34,10 @@ class ExecutionContext:
     search_dir: Optional[Path] = None
     storage_dir: Optional[Path] = None
     symlinks_dir: Optional[Path] = None
-    temp_symlinks_dir: Optional[Path] = None
+    output_dir: Optional[Path] = None
+    days_to_process: float = 0
+    debug: bool = False
+    tag: str = ""
 
     @property
     def is_simulation(self) -> bool:
@@ -64,26 +70,36 @@ def set_context(ctx: Optional[ExecutionContext]) -> None:
 
 
 @contextmanager
-def execution_context(**kwargs) -> Generator[ExecutionContext, None, None]:
+def execution_context(
+    ctx: Optional[ExecutionContext] = None,
+    **kwargs
+) -> Generator[ExecutionContext, None, None]:
     """
     Context manager for temporarily setting execution context.
 
     Args:
-        **kwargs: Arguments to pass to ExecutionContext constructor.
+        ctx: An existing ExecutionContext to use, or None to create one.
+        **kwargs: Arguments to pass to ExecutionContext constructor if ctx is None.
 
     Yields:
-        The created ExecutionContext.
+        The ExecutionContext.
 
     Example:
         with execution_context(dry_run=True) as ctx:
             # Operations here see dry_run=True
             process_videos()
         # Previous context restored
+
+        # Or with an existing context:
+        my_ctx = ExecutionContext(dry_run=True)
+        with execution_context(my_ctx):
+            process_videos()
     """
     global _current_context
     previous = _current_context
 
-    ctx = ExecutionContext(**kwargs)
+    if ctx is None:
+        ctx = ExecutionContext(**kwargs)
     _current_context = ctx
 
     try:

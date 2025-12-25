@@ -116,3 +116,52 @@ class TestExecutionContextManager:
         with execution_context(search_dir=search, storage_dir=storage) as ctx:
             assert ctx.search_dir == search
             assert ctx.storage_dir == storage
+
+    def test_context_manager_accepts_existing_context(self):
+        """Context manager accepts an existing ExecutionContext."""
+        ctx = ExecutionContext(
+            dry_run=True,
+            force_mode=True,
+            days_to_process=7.0,
+            debug=True,
+            tag="test_tag",
+        )
+
+        with execution_context(ctx) as active_ctx:
+            assert active_ctx is ctx
+            assert get_context().dry_run is True
+            assert get_context().days_to_process == 7.0
+            assert get_context().tag == "test_tag"
+
+
+class TestExecutionContextNewFields:
+    """Tests for new ExecutionContext fields."""
+
+    def test_days_to_process_default(self):
+        """days_to_process defaults to 0."""
+        ctx = ExecutionContext()
+        assert ctx.days_to_process == 0
+
+    def test_debug_and_tag_defaults(self):
+        """debug and tag have correct defaults."""
+        ctx = ExecutionContext()
+        assert ctx.debug is False
+        assert ctx.tag == ""
+
+    def test_output_dir_field(self):
+        """output_dir can be set."""
+        ctx = ExecutionContext(output_dir=Path("/output"))
+        assert ctx.output_dir == Path("/output")
+
+    def test_all_new_fields(self):
+        """All new fields work together."""
+        ctx = ExecutionContext(
+            output_dir=Path("/output"),
+            days_to_process=30.0,
+            debug=True,
+            tag="my_tag",
+        )
+        assert ctx.output_dir == Path("/output")
+        assert ctx.days_to_process == 30.0
+        assert ctx.debug is True
+        assert ctx.tag == "my_tag"
