@@ -129,3 +129,143 @@ class TestGetCategoryStats:
 
         assert result["Action & Aventure"] == 2
         assert result["Drame"] == 1
+
+
+class TestDisplayTree:
+    """Tests for display_tree function."""
+
+    def test_display_tree_empty(self):
+        """Displays empty tree without error."""
+        from organize.ui.display import display_tree
+
+        with patch("organize.ui.display.console") as mock_console:
+            display_tree({})
+            mock_console.print.assert_called_once()
+
+    def test_display_tree_with_files(self):
+        """Displays tree with files."""
+        from organize.ui.display import display_tree
+
+        tree_structure = {
+            "Films/Action": ["Movie1.mkv", "Movie2.mkv"],
+            "Séries/Drama": ["Episode.mkv"],
+        }
+
+        with patch("organize.ui.display.console") as mock_console:
+            display_tree(tree_structure)
+            mock_console.print.assert_called_once()
+
+    def test_display_tree_truncates_long_lists(self):
+        """Truncates file lists that exceed max."""
+        from organize.ui.display import display_tree
+
+        tree_structure = {
+            "Films/Action": [f"Movie{i}.mkv" for i in range(10)],
+        }
+
+        with patch("organize.ui.display.console") as mock_console:
+            display_tree(tree_structure, max_files_per_folder=3)
+            mock_console.print.assert_called_once()
+
+    def test_display_tree_non_detected_folder(self):
+        """Handles non détectés folder styling."""
+        from organize.ui.display import display_tree
+
+        tree_structure = {
+            "Films/non détectés": ["Unknown.mkv"],
+        }
+
+        with patch("organize.ui.display.console") as mock_console:
+            display_tree(tree_structure)
+            mock_console.print.assert_called_once()
+
+
+class TestDisplayStatistics:
+    """Tests for display_statistics function."""
+
+    def test_display_statistics_empty(self):
+        """Warns when no videos provided."""
+        from organize.ui.display import display_statistics
+
+        with patch("organize.ui.display.console") as mock_console:
+            display_statistics([])
+            mock_console.print_warning.assert_called_once()
+
+    def test_display_statistics_with_videos(self):
+        """Displays statistics for videos."""
+        from organize.ui.display import display_statistics
+
+        video1 = MagicMock()
+        video1.type_file = "Films"
+        video1.genre = "Action"
+
+        video2 = MagicMock()
+        video2.type_file = "Séries"
+        video2.genre = "Drama"
+
+        with patch("organize.ui.display.console") as mock_console:
+            mock_console.create_table.return_value = MagicMock()
+            display_statistics([video1, video2])
+            assert mock_console.rule.called
+            assert mock_console.create_table.call_count == 2
+
+
+class TestDisplaySummary:
+    """Tests for display_summary function."""
+
+    def test_display_summary_normal_mode(self):
+        """Displays summary in normal mode."""
+        from organize.ui.display import display_summary
+
+        with patch("organize.ui.display.console") as mock_console:
+            display_summary(10, 8, 2, dry_run=False)
+            mock_console.rule.assert_called_once()
+            assert mock_console.print.call_count >= 2
+
+    def test_display_summary_dry_run(self):
+        """Displays summary in dry run mode."""
+        from organize.ui.display import display_summary
+
+        with patch("organize.ui.display.console") as mock_console:
+            display_summary(10, 10, 0, dry_run=True)
+            call_args = mock_console.rule.call_args[0][0]
+            assert "SIMULATION" in call_args
+
+    def test_display_summary_no_failures(self):
+        """Skips failure line when no failures."""
+        from organize.ui.display import display_summary
+
+        with patch("organize.ui.display.console") as mock_console:
+            display_summary(10, 10, 0)
+            # Should have 2 print calls (total, successful) but not failed
+            assert mock_console.print.call_count == 2
+
+
+class TestGenerateTreeStructureFilmWithGenre:
+    """Additional tests for generate_tree_structure."""
+
+    def test_handles_film_with_genre(self):
+        """Handles films with detected genre."""
+        video = MagicMock()
+        video.formatted_filename = "Action.mkv"
+        video.sub_directory = None
+        video.is_film_anim.return_value = True
+        video.is_serie.return_value = False
+        video.genre = "Action & Aventure"
+
+        result = generate_tree_structure([video])
+
+        assert "Films/Action & Aventure" in result
+
+    def test_handles_other_type(self):
+        """Handles non-film, non-series types."""
+        video = MagicMock()
+        video.formatted_filename = "Doc.mkv"
+        video.sub_directory = None
+        video.is_film_anim.return_value = False
+        video.is_serie.return_value = False
+        video.type_file = "Docs"
+
+        result = generate_tree_structure([video])
+
+        assert "Docs" in result

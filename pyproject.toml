@@ -1,8 +1,22 @@
 [project]
 name = "organize"
-version = "0.1.0"
-description = "Add your description here"
+version = "1.0.0"
+description = "Video library organization tool with TMDB/TVDB integration"
 requires-python = ">=3.13"
+readme = "readme.md"
+license = {text = "MIT"}
+keywords = ["video", "organization", "tmdb", "tvdb", "media"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Utilities",
+]
 dependencies = [
     "guessit>=3.8.0",
     "loguru>=0.7.3",
@@ -11,9 +25,37 @@ dependencies = [
     "tvdb-api>=3.1.0",
 ]
 
+[project.scripts]
+organize-video = "organize.__main__:main"
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["organize"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["organize"]
