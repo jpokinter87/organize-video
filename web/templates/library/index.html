@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Bibliotheque - Video Organizer{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-white">Bibliotheque</h1>
+            <p class="text-dark-400 mt-1">{{ videos.paginator.count }} video{{ videos.paginator.count|pluralize }}</p>
+        </div>
+
+        <!-- Search -->
+        <form method="get" class="flex-shrink-0">
+            <div class="relative">
+                <input type="text" name="q" value="{{ search_query|default:'' }}"
+                       placeholder="Rechercher..."
+                       class="w-full sm:w-64 pl-10 pr-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white
+                              focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+        </form>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-6 flex flex-wrap gap-3 items-center">
+        <!-- Category filter -->
+        <div class="flex gap-2">
+            <a href="{% url 'library:index' %}"
+               class="px-3 py-1.5 rounded-lg text-sm {% if not current_category %}bg-primary-600 text-white{% else %}bg-dark-800 text-dark-300 hover:bg-dark-700{% endif %}">
+                Tout
+            </a>
+            {% for cat in categories %}
+            <a href="?category={{ cat }}{% if search_query %}&q={{ search_query }}{% endif %}"
+               class="px-3 py-1.5 rounded-lg text-sm {% if current_category == cat %}bg-primary-600 text-white{% else %}bg-dark-800 text-dark-300 hover:bg-dark-700{% endif %}">
+                {{ cat|title }}
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Genre dropdown -->
+        {% if genres %}
+        <div x-data="{ open: false }" class="relative">
+            <button @click="open = !open"
+                    class="px-3 py-1.5 rounded-lg text-sm bg-dark-800 text-dark-300 hover:bg-dark-700 flex items-center gap-2">
+                {% if current_genre %}{{ current_genre }}{% else %}Genre{% endif %}
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <div x-show="open" @click.away="open = false"
+                 class="absolute z-10 mt-1 w-48 bg-dark-800 rounded-lg shadow-lg py-1 max-h-64 overflow-y-auto">
+                <a href="{% url 'library:index' %}{% if current_category %}?category={{ current_category }}{% endif %}"
+                   class="block px-4 py-2 text-sm text-dark-300 hover:bg-dark-700">
+                    Tous les genres
+                </a>
+                {% for g in genres %}
+                <a href="?genre={{ g }}{% if current_category %}&category={{ current_category }}{% endif %}"
+                   class="block px-4 py-2 text-sm {% if current_genre == g %}text-primary-400{% else %}text-dark-300{% endif %} hover:bg-dark-700">
+                    {{ g }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Year dropdown -->
+        {% if years %}
+        <div x-data="{ open: false }" class="relative">
+            <button @click="open = !open"
+                    class="px-3 py-1.5 rounded-lg text-sm bg-dark-800 text-dark-300 hover:bg-dark-700 flex items-center gap-2">
+                {% if current_year %}{{ current_year }}{% else %}Annee{% endif %}
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <div x-show="open" @click.away="open = false"
+                 class="absolute z-10 mt-1 w-32 bg-dark-800 rounded-lg shadow-lg py-1 max-h-64 overflow-y-auto">
+                <a href="{% url 'library:index' %}{% if current_category %}?category={{ current_category }}{% endif %}"
+                   class="block px-4 py-2 text-sm text-dark-300 hover:bg-dark-700">
+                    Toutes
+                </a>
+                {% for y in years %}
+                <a href="?year={{ y }}{% if current_category %}&category={{ current_category }}{% endif %}"
+                   class="block px-4 py-2 text-sm {% if current_year == y|stringformat:'s' %}text-primary-400{% else %}text-dark-300{% endif %} hover:bg-dark-700">
+                    {{ y }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Clear filters -->
+        {% if current_category or current_genre or current_year or search_query %}
+        <a href="{% url 'library:index' %}" class="text-sm text-dark-400 hover:text-white">
+            Effacer les filtres
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Video Grid -->
+    <div id="video-grid">
+        {% include "library/partials/video_grid.html" %}
+    </div>
+</div>
+{% endblock %}

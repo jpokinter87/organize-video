@@ -1,0 +1,204 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Video Organizer{% endblock %}</title>
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#fdf4ff',
+                            100: '#fae8ff',
+                            200: '#f5d0fe',
+                            300: '#f0abfc',
+                            400: '#e879f9',
+                            500: '#d946ef',
+                            600: '#c026d3',
+                            700: '#a21caf',
+                            800: '#86198f',
+                            900: '#701a75',
+                        },
+                        dark: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+
+    <!-- Alpine.js for small UI interactions -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* HTMX loading indicator */
+        .htmx-request .htmx-indicator {
+            display: inline-block;
+        }
+        .htmx-indicator {
+            display: none;
+        }
+
+        /* Poster hover effect */
+        .poster-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .poster-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Fade in animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="h-full bg-dark-950 text-dark-100" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <div class="min-h-full flex flex-col">
+        <!-- Navigation -->
+        <nav class="bg-dark-900 border-b border-dark-700 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Logo -->
+                    <div class="flex items-center">
+                        <a href="{% url 'core:home' %}" class="flex items-center space-x-2">
+                            <svg class="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                            </svg>
+                            <span class="text-xl font-bold text-white">Video Organizer</span>
+                        </a>
+                    </div>
+
+                    <!-- Navigation Links -->
+                    <div class="hidden md:flex items-center space-x-4">
+                        <a href="{% url 'core:home' %}"
+                           class="px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'home' %}bg-dark-700 text-white{% else %}text-dark-300 hover:bg-dark-800 hover:text-white{% endif %}">
+                            Accueil
+                        </a>
+                        <a href="{% url 'processing:job_list' %}"
+                           class="px-3 py-2 rounded-md text-sm font-medium {% if 'processing' in request.resolver_match.namespace %}bg-dark-700 text-white{% else %}text-dark-300 hover:bg-dark-800 hover:text-white{% endif %}">
+                            Traitement
+                        </a>
+                        <a href="{% url 'library:index' %}"
+                           class="px-3 py-2 rounded-md text-sm font-medium {% if 'library' in request.resolver_match.namespace %}bg-dark-700 text-white{% else %}text-dark-300 hover:bg-dark-800 hover:text-white{% endif %}">
+                            Bibliotheque
+                        </a>
+                        <a href="{% url 'dashboard:index' %}"
+                           class="px-3 py-2 rounded-md text-sm font-medium {% if 'dashboard' in request.resolver_match.namespace %}bg-dark-700 text-white{% else %}text-dark-300 hover:bg-dark-800 hover:text-white{% endif %}">
+                            Statistiques
+                        </a>
+                        <a href="{% url 'core:settings' %}"
+                           class="px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'settings' %}bg-dark-700 text-white{% else %}text-dark-300 hover:bg-dark-800 hover:text-white{% endif %}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </a>
+                    </div>
+
+                    <!-- Mobile menu button -->
+                    <div class="md:hidden" x-data="{ open: false }">
+                        <button @click="open = !open" class="text-dark-400 hover:text-white p-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path x-show="!open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                                <path x-show="open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+
+                        <!-- Mobile menu -->
+                        <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 bg-dark-800 rounded-md shadow-lg py-1">
+                            <a href="{% url 'core:home' %}" class="block px-4 py-2 text-sm text-dark-200 hover:bg-dark-700">Accueil</a>
+                            <a href="{% url 'processing:job_list' %}" class="block px-4 py-2 text-sm text-dark-200 hover:bg-dark-700">Traitement</a>
+                            <a href="{% url 'library:index' %}" class="block px-4 py-2 text-sm text-dark-200 hover:bg-dark-700">Bibliotheque</a>
+                            <a href="{% url 'dashboard:index' %}" class="block px-4 py-2 text-sm text-dark-200 hover:bg-dark-700">Statistiques</a>
+                            <a href="{% url 'core:settings' %}" class="block px-4 py-2 text-sm text-dark-200 hover:bg-dark-700">Parametres</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+            {% for message in messages %}
+            <div class="rounded-md p-4 mb-2 {% if message.tags == 'error' %}bg-red-900/50 text-red-200{% elif message.tags == 'success' %}bg-green-900/50 text-green-200{% elif message.tags == 'warning' %}bg-yellow-900/50 text-yellow-200{% else %}bg-blue-900/50 text-blue-200{% endif %}"
+                 x-data="{ show: true }" x-show="show" x-transition>
+                <div class="flex items-center justify-between">
+                    <p class="text-sm">{{ message }}</p>
+                    <button @click="show = false" class="ml-4 text-current opacity-70 hover:opacity-100">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main class="flex-1">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-dark-900 border-t border-dark-700 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex items-center justify-between text-sm text-dark-400">
+                    <span>Video Organizer &copy; 2024</span>
+                    <span>TMDB &bull; TVDB</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal container for HTMX -->
+    <div id="modal-container"></div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

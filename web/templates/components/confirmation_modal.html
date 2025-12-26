@@ -1,0 +1,200 @@
+{% comment %}
+Confirmation modal for video title matching.
+Usage: {% include "components/confirmation_modal.html" with confirmation=confirmation %}
+{% endcomment %}
+
+<div class="fixed inset-0 z-50 overflow-y-auto" x-data="{ open: true }" x-show="open">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black/70 transition-opacity" @click="open = false"></div>
+
+    <!-- Modal -->
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="relative bg-dark-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden fade-in">
+            <!-- Header -->
+            <div class="bg-dark-900 px-6 py-4 border-b border-dark-700">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-white">Confirmation requise</h2>
+                    <button @click="open = false"
+                            class="text-dark-400 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Original file info -->
+            <div class="px-6 py-4 bg-dark-850 border-b border-dark-700">
+                <div class="flex items-center space-x-2 text-sm">
+                    <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span class="text-dark-300">Fichier original:</span>
+                </div>
+                <p class="mt-1 text-white font-mono text-sm break-all">
+                    {{ confirmation.video.original_filename }}
+                </p>
+                <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                    <span class="px-2 py-1 bg-dark-700 rounded text-dark-300">
+                        {{ confirmation.video.get_category_display }}
+                    </span>
+                    {% if confirmation.video.detected_year %}
+                    <span class="px-2 py-1 bg-dark-700 rounded text-dark-300">
+                        {{ confirmation.video.detected_year }}
+                    </span>
+                    {% endif %}
+                    {% if confirmation.video.spec_string %}
+                    <span class="px-2 py-1 bg-dark-700 rounded text-dark-300">
+                        {{ confirmation.video.spec_string }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Candidates list -->
+            <div class="px-6 py-4 overflow-y-auto max-h-[50vh]">
+                <h3 class="text-sm font-medium text-dark-400 mb-4">
+                    {{ confirmation.tmdb_candidates|length }} resultat{{ confirmation.tmdb_candidates|length|pluralize }} trouve{{ confirmation.tmdb_candidates|length|pluralize }}
+                </h3>
+
+                <div class="space-y-4">
+                    {% for candidate in confirmation.tmdb_candidates %}
+                    <div class="bg-dark-700 rounded-lg p-4 hover:bg-dark-600 transition-colors cursor-pointer group"
+                         hx-post="{% url 'processing:resolve_confirmation' confirmation.id %}"
+                         hx-vals='{"action": "accept", "tmdb_id": "{{ candidate.id }}"}'
+                         hx-swap="outerHTML"
+                         hx-target="closest .confirmation-item">
+                        <div class="flex gap-4">
+                            <!-- Poster thumbnail -->
+                            <div class="flex-shrink-0 w-24">
+                                {% if candidate.poster_path %}
+                                <img src="https://image.tmdb.org/t/p/w185{{ candidate.poster_path }}"
+                                     alt="{{ candidate.title }}"
+                                     class="w-full rounded shadow-lg">
+                                {% else %}
+                                <div class="aspect-[2/3] bg-dark-800 rounded flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Info -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <h4 class="text-white font-medium group-hover:text-primary-400 transition-colors">
+                                            {{ candidate.title }}
+                                        </h4>
+                                        {% if candidate.original_title and candidate.original_title != candidate.title %}
+                                        <p class="text-sm text-dark-400 italic">{{ candidate.original_title }}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Rating -->
+                                    {% if candidate.vote_average %}
+                                    <span class="flex-shrink-0 ml-2 px-2 py-1 rounded text-xs font-bold
+                                                 {% if candidate.vote_average >= 7 %}bg-green-600{% elif candidate.vote_average >= 5 %}bg-yellow-600{% else %}bg-red-600{% endif %}">
+                                        {{ candidate.vote_average|floatformat:1 }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Year and Genres -->
+                                <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-dark-400">
+                                    {% if candidate.release_date or candidate.first_air_date %}
+                                    <span>{{ candidate.release_date|default:candidate.first_air_date|slice:":4" }}</span>
+                                    {% endif %}
+                                    {% if candidate.genres %}
+                                    <span>&bull;</span>
+                                    <span>{{ candidate.genres|join:", " }}</span>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Directors -->
+                                {% if candidate.directors %}
+                                <p class="mt-1 text-sm text-dark-400">
+                                    <span class="text-dark-500">Realisateur:</span> {{ candidate.directors|join:", " }}
+                                </p>
+                                {% endif %}
+
+                                <!-- Synopsis -->
+                                {% if candidate.overview %}
+                                <p class="mt-2 text-sm text-dark-300 line-clamp-3">
+                                    {{ candidate.overview|truncatewords:50 }}
+                                </p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Select indicator -->
+                            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg class="w-6 h-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-8 text-dark-400">
+                        <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p>Aucun resultat trouve</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="px-6 py-4 bg-dark-900 border-t border-dark-700">
+                <div class="flex flex-wrap gap-3 justify-between">
+                    <div class="flex gap-3">
+                        <!-- Manual entry -->
+                        <button type="button"
+                                x-data="{ showInput: false }"
+                                @click="showInput = !showInput"
+                                class="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors">
+                            Saisie manuelle
+                        </button>
+
+                        <!-- Skip -->
+                        <button type="button"
+                                hx-post="{% url 'processing:resolve_confirmation' confirmation.id %}"
+                                hx-vals='{"action": "skip"}'
+                                hx-swap="outerHTML"
+                                hx-target="closest .confirmation-item"
+                                class="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-dark-300 rounded-lg transition-colors">
+                            Ignorer
+                        </button>
+                    </div>
+
+                    <button @click="open = false"
+                            class="px-4 py-2 text-dark-400 hover:text-white transition-colors">
+                        Fermer
+                    </button>
+                </div>
+
+                <!-- Manual input form (hidden by default) -->
+                <div x-show="showInput" x-cloak class="mt-4 p-4 bg-dark-700 rounded-lg">
+                    <form hx-post="{% url 'processing:resolve_confirmation' confirmation.id %}"
+                          hx-swap="outerHTML"
+                          hx-target="closest .confirmation-item">
+                        <input type="hidden" name="action" value="manual">
+                        <div class="flex gap-3">
+                            <input type="text"
+                                   name="manual_title"
+                                   placeholder="Entrez le titre exact..."
+                                   class="flex-1 px-4 py-2 bg-dark-800 border border-dark-600 rounded-lg text-white
+                                          focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            <button type="submit"
+                                    class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                                Rechercher
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

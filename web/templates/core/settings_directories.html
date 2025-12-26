@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Repertoires - Video Organizer{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white">Configuration des repertoires</h1>
+        <p class="text-dark-400 mt-1">Definissez les repertoires de travail</p>
+    </div>
+
+    <!-- Settings Navigation -->
+    <div class="flex space-x-4 mb-6 border-b border-dark-700 pb-4">
+        <a href="{% url 'core:settings' %}"
+           class="px-4 py-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors">
+            General
+        </a>
+        <a href="{% url 'core:settings_directories' %}"
+           class="px-4 py-2 rounded-lg bg-dark-700 text-white font-medium">
+            Repertoires
+        </a>
+        <a href="{% url 'core:settings_hash_db' %}"
+           class="px-4 py-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors">
+            Base de hash
+        </a>
+    </div>
+
+    <!-- Directory Settings -->
+    <form method="post" action="{% url 'core:settings_update' %}" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Search Directory -->
+        <div class="bg-dark-800 rounded-lg border border-dark-700 p-6">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-primary-500/10 rounded-lg">
+                    <svg class="w-6 h-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-white font-medium">Repertoire de recherche</label>
+                    <p class="text-sm text-dark-400 mt-1">Repertoire contenant les videos a traiter</p>
+                    <input type="text" name="value"
+                           value="{{ settings.search_dir.value|default:'' }}"
+                           placeholder="/media/NAS64/temp"
+                           class="mt-3 w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <input type="hidden" name="key" value="search_dir">
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button type="submit" formaction="{% url 'core:settings_update' %}"
+                        class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                    Sauvegarder
+                </button>
+            </div>
+        </div>
+
+        <!-- Storage Directory -->
+        <div class="bg-dark-800 rounded-lg border border-dark-700 p-6">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-blue-500/10 rounded-lg">
+                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-white font-medium">Repertoire de stockage</label>
+                    <p class="text-sm text-dark-400 mt-1">Destination finale des videos organisees</p>
+                    <input type="text" name="storage_value"
+                           value="{{ settings.storage_dir.value|default:'' }}"
+                           placeholder="/media/NAS64"
+                           class="mt-3 w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                </div>
+            </div>
+        </div>
+
+        <!-- Symlinks Directory -->
+        <div class="bg-dark-800 rounded-lg border border-dark-700 p-6">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-green-500/10 rounded-lg">
+                    <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-white font-medium">Repertoire des symlinks</label>
+                    <p class="text-sm text-dark-400 mt-1">Structure organisee de liens symboliques</p>
+                    <input type="text" name="symlinks_value"
+                           value="{{ settings.symlinks_dir.value|default:'' }}"
+                           placeholder="/media/Serveur/test"
+                           class="mt-3 w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                </div>
+            </div>
+        </div>
+
+        <!-- Temp Symlinks Directory -->
+        <div class="bg-dark-800 rounded-lg border border-dark-700 p-6">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-yellow-500/10 rounded-lg">
+                    <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-white font-medium">Repertoire des symlinks temporaires</label>
+                    <p class="text-sm text-dark-400 mt-1">Liens en attente de traitement</p>
+                    <input type="text" name="temp_symlinks_value"
+                           value="{{ settings.temp_symlinks_dir.value|default:'' }}"
+                           placeholder="/media/Serveur/LAF/liens_a_faire"
+                           class="mt-3 w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

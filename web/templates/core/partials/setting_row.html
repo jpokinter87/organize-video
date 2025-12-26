@@ -1,0 +1,47 @@
+<div class="px-6 py-4 fade-in" id="setting-{{ setting.key }}">
+    <form hx-post="{% url 'core:settings_update' %}"
+          hx-target="#setting-{{ setting.key }}"
+          hx-swap="outerHTML"
+          class="flex items-center justify-between gap-4">
+        {% csrf_token %}
+        <input type="hidden" name="key" value="{{ setting.key }}">
+        <div class="flex-1 min-w-0">
+            <label class="block text-white font-medium">{{ setting.key }}</label>
+            {% if setting.description %}
+            <p class="text-sm text-dark-400">{{ setting.description }}</p>
+            {% endif %}
+        </div>
+        <div class="flex items-center gap-2">
+            {% if setting.value_type == 'boolean' %}
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="value" value="true"
+                       {% if setting.typed_value %}checked{% endif %}
+                       class="sr-only peer"
+                       onchange="this.form.requestSubmit()">
+                <div class="w-11 h-6 bg-dark-600 peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+            </label>
+            {% else %}
+            <input type="text" name="value" value="{{ setting.value }}"
+                   class="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white
+                          focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                          w-64">
+            <button type="submit"
+                    class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                <span class="htmx-indicator">
+                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                </span>
+                Sauver
+            </button>
+            {% endif %}
+        </div>
+    </form>
+    <div class="mt-2 text-sm text-green-500">
+        <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+        </svg>
+        Sauvegarde
+    </div>
+</div>

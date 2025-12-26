@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Statistiques - Video Organizer{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white">Statistiques</h1>
+        <p class="text-dark-400 mt-1">Vue d'ensemble de votre bibliotheque</p>
+    </div>
+
+    <!-- Video Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <p class="text-dark-400 text-sm">Total videos</p>
+            <p class="text-3xl font-bold text-white mt-1">{{ video_stats.total }}</p>
+        </div>
+        <div class="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <p class="text-dark-400 text-sm">Completees</p>
+            <p class="text-3xl font-bold text-green-400 mt-1">{{ video_stats.completed }}</p>
+        </div>
+        <div class="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <p class="text-dark-400 text-sm">En attente</p>
+            <p class="text-3xl font-bold text-yellow-400 mt-1">{{ video_stats.pending }}</p>
+        </div>
+        <div class="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <p class="text-dark-400 text-sm">Echecs</p>
+            <p class="text-3xl font-bold text-red-400 mt-1">{{ video_stats.failed }}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Categories -->
+        <div class="bg-dark-800 rounded-lg border border-dark-700">
+            <div class="px-6 py-4 border-b border-dark-700">
+                <h2 class="text-lg font-semibold text-white">Par categorie</h2>
+            </div>
+            <div class="p-6">
+                {% if category_stats %}
+                <div class="space-y-4">
+                    {% for stat in category_stats %}
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-dark-200">{{ stat.category|title }}</span>
+                            <span class="text-dark-400">{{ stat.count }}</span>
+                        </div>
+                        <div class="w-full bg-dark-700 rounded-full h-2">
+                            <div class="bg-primary-500 h-2 rounded-full"
+                                 style="width: {% widthratio stat.count video_stats.completed 100 %}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-dark-400 text-center py-8">Aucune donnee</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Genres -->
+        <div class="bg-dark-800 rounded-lg border border-dark-700">
+            <div class="px-6 py-4 border-b border-dark-700">
+                <h2 class="text-lg font-semibold text-white">Top genres</h2>
+            </div>
+            <div class="p-6">
+                {% if genre_stats %}
+                <div class="space-y-4">
+                    {% for stat in genre_stats %}
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-dark-200">{{ stat.genre }}</span>
+                            <span class="text-dark-400">{{ stat.count }}</span>
+                        </div>
+                        <div class="w-full bg-dark-700 rounded-full h-2">
+                            <div class="bg-primary-500 h-2 rounded-full"
+                                 style="width: {% widthratio stat.count genre_stats.0.count 100 %}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-dark-400 text-center py-8">Aucune donnee</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Job Stats -->
+        <div class="bg-dark-800 rounded-lg border border-dark-700">
+            <div class="px-6 py-4 border-b border-dark-700">
+                <h2 class="text-lg font-semibold text-white">Jobs de traitement</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <p class="text-3xl font-bold text-white">{{ job_stats.total }}</p>
+                        <p class="text-dark-400 text-sm">Total</p>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold text-green-400">{{ job_stats.completed }}</p>
+                        <p class="text-dark-400 text-sm">Termines</p>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold text-blue-400">{{ job_stats.running }}</p>
+                        <p class="text-dark-400 text-sm">En cours</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage -->
+        <div class="bg-dark-800 rounded-lg border border-dark-700">
+            <div class="px-6 py-4 border-b border-dark-700">
+                <h2 class="text-lg font-semibold text-white">Stockage</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <p class="text-3xl font-bold text-white">{{ hash_stats.total_files }}</p>
+                        <p class="text-dark-400 text-sm">Fichiers haches</p>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold text-white">
+                            {% if hash_stats.total_size %}
+                                {{ hash_stats.total_size|filesizeformat }}
+                            {% else %}
+                                0 B
+                            {% endif %}
+                        </p>
+                        <p class="text-dark-400 text-sm">Taille totale</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="mt-8 flex gap-4">
+        <a href="{% url 'dashboard:logs' %}"
+           class="px-4 py-2 bg-dark-800 hover:bg-dark-700 border border-dark-700 text-dark-300 rounded-lg transition-colors">
+            Voir les logs
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% comment %}
+Job progress partial for HTMX polling.
+{% endcomment %}
+
+<div id="job-progress" class="bg-dark-800 rounded-lg border border-dark-700 p-6 mb-6"
+     {% if job.status in 'pending,scanning,processing,awaiting_confirmation' %}
+     hx-get="{% url 'processing:job_detail' job.id %}"
+     hx-trigger="every 3s"
+     hx-select="#job-progress"
+     hx-swap="outerHTML"
+     {% endif %}>
+
+    <div class="flex items-center justify-between mb-2">
+        <span class="text-white font-medium">Progression</span>
+        {% if job.progress_total %}
+        <span class="text-dark-400">{{ job.progress_processed|default:0 }}/{{ job.progress_total }}</span>
+        {% endif %}
+    </div>
+
+    <div class="w-full bg-dark-700 rounded-full h-3">
+        {% if job.progress_total and job.progress_total > 0 %}
+        <div class="bg-primary-500 h-3 rounded-full transition-all duration-500"
+             style="width: {% widthratio job.progress_processed job.progress_total 100 %}%"></div>
+        {% else %}
+        <div class="bg-primary-500 h-3 rounded-full w-0"></div>
+        {% endif %}
+    </div>
+
+    {% if job.current_file %}
+    <p class="text-sm text-dark-400 mt-2 truncate">
+        <svg class="w-4 h-4 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        {{ job.current_file }}
+    </p>
+    {% endif %}
+
+    {% if job.status not in 'completed,failed,cancelled' %}
+    <div class="mt-4">
+        <a href="{% url 'processing:job_cancel' job.id %}"
+           class="text-red-400 hover:text-red-300 text-sm">
+            Annuler ce job
+        </a>
+    </div>
+    {% elif job.status == 'failed' %}
+    <div class="mt-4 flex items-center gap-4">
+        <span class="text-red-400 text-sm">
+            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            {{ job.error_message|default:"Erreur inconnue" }}
+        </span>
+        <a href="{% url 'processing:job_restart' job.id %}"
+           class="text-primary-400 hover:text-primary-300 text-sm">
+            Relancer
+        </a>
+    </div>
+    {% elif job.status == 'completed' %}
+    <div class="mt-4 text-green-400 text-sm">
+        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Termine en {{ job.duration|default:"?" }}
+    </div>
+    {% endif %}
+</div>

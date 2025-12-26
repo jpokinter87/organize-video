@@ -1,0 +1,85 @@
+{% comment %}
+Poster card component for displaying video with TMDB metadata.
+Usage: {% include "components/poster_card.html" with video=video %}
+{% endcomment %}
+
+<div class="poster-card bg-dark-800 rounded-lg overflow-hidden shadow-lg group relative">
+    <!-- Poster Image -->
+    <div class="aspect-[2/3] relative overflow-hidden">
+        {% if video.poster_local %}
+            <img src="{{ video.poster_local.url }}"
+                 alt="{{ video.title_fr|default:video.detected_title }}"
+                 class="w-full h-full object-cover"
+                 loading="lazy">
+        {% elif video.poster_path %}
+            <img src="https://image.tmdb.org/t/p/w342{{ video.poster_path }}"
+                 alt="{{ video.title_fr|default:video.detected_title }}"
+                 class="w-full h-full object-cover"
+                 loading="lazy">
+        {% else %}
+            <div class="w-full h-full bg-dark-700 flex items-center justify-center">
+                <svg class="w-16 h-16 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                </svg>
+            </div>
+        {% endif %}
+
+        <!-- Rating Badge -->
+        {% if video.vote_average %}
+        <div class="absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold
+                    {% if video.vote_average >= 7 %}bg-green-600{% elif video.vote_average >= 5 %}bg-yellow-600{% else %}bg-red-600{% endif %}">
+            {{ video.vote_average|floatformat:1 }}
+        </div>
+        {% endif %}
+
+        <!-- Category Badge -->
+        <div class="absolute top-2 left-2 px-2 py-1 bg-dark-900/80 rounded text-xs font-medium text-dark-200">
+            {{ video.get_category_display }}
+        </div>
+
+        <!-- Overlay on hover -->
+        <div class="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/60 to-transparent
+                    opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                    flex flex-col justify-end p-4">
+            <!-- Synopsis -->
+            {% if video.overview %}
+            <p class="text-sm text-dark-200 line-clamp-4 mb-2">
+                {{ video.overview|truncatewords:40 }}
+            </p>
+            {% endif %}
+
+            <!-- Director -->
+            {% if video.directors %}
+            <p class="text-xs text-dark-400">
+                <span class="font-medium">Realisateur:</span>
+                {{ video.directors|join:", " }}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Card Info -->
+    <div class="p-3">
+        <h3 class="text-white font-medium truncate" title="{{ video.title_fr|default:video.detected_title }}">
+            {{ video.title_fr|default:video.detected_title }}
+        </h3>
+        <div class="flex items-center justify-between mt-1 text-sm text-dark-400">
+            <span>{{ video.detected_year|default:"" }}</span>
+            {% if video.genre %}
+            <span class="truncate ml-2">{{ video.genre }}</span>
+            {% endif %}
+        </div>
+        {% if video.spec_string %}
+        <div class="mt-2 text-xs text-dark-500 truncate" title="{{ video.spec_string }}">
+            {{ video.spec_string }}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Link overlay -->
+    {% if video.id %}
+    <a href="{% url 'library:video_detail' video.id %}" class="absolute inset-0 z-10">
+        <span class="sr-only">Voir {{ video.title_fr|default:video.detected_title }}</span>
+    </a>
+    {% endif %}
+</div>

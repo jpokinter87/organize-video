@@ -1,0 +1,72 @@
+{% comment %}
+Single confirmation card for HTMX replacement.
+{% endcomment %}
+
+<div class="confirmation-item bg-dark-800 rounded-lg border border-dark-700 overflow-hidden fade-in">
+    <div class="px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-4 min-w-0">
+            <!-- Type badge -->
+            <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-medium
+                {% if confirmation.confirmation_type == 'title_match' %}bg-blue-500/20 text-blue-400
+                {% elif confirmation.confirmation_type == 'genre_select' %}bg-purple-500/20 text-purple-400
+                {% elif confirmation.confirmation_type == 'duplicate' %}bg-orange-500/20 text-orange-400
+                {% else %}bg-red-500/20 text-red-400{% endif %}">
+                {{ confirmation.get_confirmation_type_display }}
+            </span>
+
+            <!-- File info -->
+            <div class="min-w-0">
+                <p class="text-white font-medium truncate">
+                    {{ confirmation.video.detected_title|default:confirmation.video.original_filename }}
+                </p>
+                <p class="text-sm text-dark-400 truncate">
+                    {{ confirmation.video.original_filename }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex-shrink-0 flex items-center gap-2">
+            <button type="button"
+                    hx-get="{% url 'processing:confirmation_detail' confirmation.id %}"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                Resoudre
+            </button>
+            <button type="button"
+                    hx-post="{% url 'processing:resolve_confirmation' confirmation.id %}"
+                    hx-vals='{"action": "skip"}'
+                    hx-target="closest .confirmation-item"
+                    hx-swap="outerHTML"
+                    class="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-dark-300 rounded-lg transition-colors">
+                Ignorer
+            </button>
+        </div>
+    </div>
+
+    <!-- Preview of candidates -->
+    {% if confirmation.tmdb_candidates %}
+    <div class="px-6 py-3 bg-dark-850 border-t border-dark-700">
+        <p class="text-xs text-dark-500 mb-2">{{ confirmation.tmdb_candidates|length }} candidat{{ confirmation.tmdb_candidates|length|pluralize }}</p>
+        <div class="flex gap-2 overflow-x-auto pb-2">
+            {% for candidate in confirmation.tmdb_candidates|slice:":5" %}
+            <div class="flex-shrink-0 w-16">
+                {% if candidate.poster_path %}
+                <img src="https://image.tmdb.org/t/p/w92{{ candidate.poster_path }}"
+                     alt="{{ candidate.title }}"
+                     class="w-full rounded shadow"
+                     loading="lazy">
+                {% else %}
+                <div class="w-full aspect-[2/3] bg-dark-700 rounded flex items-center justify-center">
+                    <svg class="w-6 h-6 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>

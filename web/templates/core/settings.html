@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Parametres - Video Organizer{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white">Parametres</h1>
+        <p class="text-dark-400 mt-1">Configuration de l'application</p>
+    </div>
+
+    <!-- Settings Navigation -->
+    <div class="flex space-x-4 mb-6 border-b border-dark-700 pb-4">
+        <a href="{% url 'core:settings' %}"
+           class="px-4 py-2 rounded-lg bg-dark-700 text-white font-medium">
+            General
+        </a>
+        <a href="{% url 'core:settings_directories' %}"
+           class="px-4 py-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors">
+            Repertoires
+        </a>
+        <a href="{% url 'core:settings_hash_db' %}"
+           class="px-4 py-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors">
+            Base de hash
+        </a>
+    </div>
+
+    <!-- Settings Groups -->
+    <div class="space-y-6">
+        {% for group_key, group in settings_groups.items %}
+        <div class="bg-dark-800 rounded-lg border border-dark-700">
+            <div class="px-6 py-4 border-b border-dark-700">
+                <h2 class="text-lg font-semibold text-white flex items-center">
+                    {% if group.icon == 'folder' %}
+                    <svg class="w-5 h-5 mr-2 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                    {% elif group.icon == 'cloud' %}
+                    <svg class="w-5 h-5 mr-2 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+                    </svg>
+                    {% else %}
+                    <svg class="w-5 h-5 mr-2 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    {% endif %}
+                    {{ group.title }}
+                </h2>
+            </div>
+            <div class="divide-y divide-dark-700">
+                {% for setting in group.settings %}
+                <div class="px-6 py-4" id="setting-{{ setting.key }}">
+                    <form hx-post="{% url 'core:settings_update' %}"
+                          hx-target="#setting-{{ setting.key }}"
+                          hx-swap="outerHTML"
+                          class="flex items-center justify-between gap-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="key" value="{{ setting.key }}">
+                        <div class="flex-1 min-w-0">
+                            <label class="block text-white font-medium">{{ setting.key }}</label>
+                            {% if setting.description %}
+                            <p class="text-sm text-dark-400">{{ setting.description }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            {% if setting.value_type == 'boolean' %}
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="value" value="true"
+                                       {% if setting.typed_value %}checked{% endif %}
+                                       class="sr-only peer"
+                                       onchange="this.form.requestSubmit()">
+                                <div class="w-11 h-6 bg-dark-600 peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            </label>
+                            {% else %}
+                            <input type="text" name="value" value="{{ setting.value }}"
+                                   class="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white
+                                          focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                                          w-64">
+                            <button type="submit"
+                                    class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                                <span class="htmx-indicator">
+                                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                </span>
+                                Sauver
+                            </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+                {% empty %}
+                <div class="px-6 py-8 text-center text-dark-400">
+                    <p>Aucun parametre dans cette categorie</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Add New Setting -->
+    <div class="mt-8 bg-dark-800 rounded-lg border border-dark-700 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Ajouter un parametre</h3>
+        <form method="post" action="{% url 'core:settings_update' %}" class="flex gap-4">
+            {% csrf_token %}
+            <input type="text" name="key" placeholder="Cle"
+                   class="flex-1 px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white
+                          focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <input type="text" name="value" placeholder="Valeur"
+                   class="flex-1 px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white
+                          focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <button type="submit"
+                    class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                Ajouter
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

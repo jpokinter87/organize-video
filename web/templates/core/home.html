@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Accueil - Video Organizer{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white">Tableau de bord</h1>
+        <p class="text-dark-400 mt-1">Vue d'ensemble de votre bibliotheque video</p>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <!-- Total Videos -->
+        <div class="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-dark-400 text-sm">Videos totales</p>
+                    <p class="text-3xl font-bold text-white mt-1">{{ total_videos }}</p>
+                </div>
+                <div class="p-3 bg-primary-500/10 rounded-lg">
+                    <svg class="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Confirmations -->
+        <div class="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-dark-400 text-sm">En attente</p>
+                    <p class="text-3xl font-bold text-white mt-1">{{ pending_confirmations }}</p>
+                </div>
+                <div class="p-3 bg-yellow-500/10 rounded-lg">
+                    <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+            {% if pending_confirmations > 0 %}
+            <a href="{% url 'processing:confirmations' %}" class="mt-3 inline-block text-sm text-yellow-500 hover:text-yellow-400">
+                Voir les confirmations &rarr;
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Active Jobs -->
+        <div class="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-dark-400 text-sm">Jobs actifs</p>
+                    <p class="text-3xl font-bold text-white mt-1">{{ active_jobs }}</p>
+                </div>
+                <div class="p-3 bg-blue-500/10 rounded-lg">
+                    <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Action -->
+        <div class="bg-gradient-to-br from-primary-600 to-primary-800 rounded-lg p-6">
+            <p class="text-white/80 text-sm mb-2">Nouveau scan</p>
+            <a href="{% url 'processing:job_create' %}"
+               class="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Lancer un scan
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Recent Videos -->
+        <div class="lg:col-span-2">
+            <div class="bg-dark-800 rounded-lg border border-dark-700">
+                <div class="px-6 py-4 border-b border-dark-700 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-white">Videos recentes</h2>
+                    <a href="{% url 'library:index' %}" class="text-sm text-primary-500 hover:text-primary-400">
+                        Voir tout &rarr;
+                    </a>
+                </div>
+                <div class="p-6">
+                    {% if recent_videos %}
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {% for video in recent_videos %}
+                        {% include "components/poster_card.html" with video=video %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-12 text-dark-400">
+                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                        </svg>
+                        <p>Aucune video dans la bibliotheque</p>
+                        <a href="{% url 'processing:job_create' %}" class="mt-2 inline-block text-primary-500 hover:text-primary-400">
+                            Lancer votre premier scan
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Jobs -->
+        <div>
+            <div class="bg-dark-800 rounded-lg border border-dark-700">
+                <div class="px-6 py-4 border-b border-dark-700 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-white">Jobs recents</h2>
+                    <a href="{% url 'processing:job_list' %}" class="text-sm text-primary-500 hover:text-primary-400">
+                        Voir tout &rarr;
+                    </a>
+                </div>
+                <div class="divide-y divide-dark-700">
+                    {% for job in recent_jobs %}
+                    <a href="{% url 'processing:job_detail' job.id %}" class="block px-6 py-4 hover:bg-dark-700/50 transition-colors">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-white font-medium">Job #{{ job.id }}</p>
+                                <p class="text-sm text-dark-400">{{ job.created_at|date:"d/m/Y H:i" }}</p>
+                            </div>
+                            <span class="px-2 py-1 rounded text-xs font-medium
+                                {% if job.status == 'completed' %}bg-green-500/20 text-green-400
+                                {% elif job.status == 'failed' %}bg-red-500/20 text-red-400
+                                {% elif job.status == 'processing' or job.status == 'scanning' %}bg-blue-500/20 text-blue-400
+                                {% else %}bg-dark-600 text-dark-300{% endif %}">
+                                {{ job.get_status_display }}
+                            </span>
+                        </div>
+                        {% if job.progress_processed %}
+                        <div class="mt-2">
+                            <div class="w-full bg-dark-600 rounded-full h-1.5">
+                                <div class="bg-primary-500 h-1.5 rounded-full" style="width: {{ job.progress_percent }}%"></div>
+                            </div>
+                            <p class="text-xs text-dark-500 mt-1">{{ job.progress_processed }}/{{ job.progress_total }}</p>
+                        </div>
+                        {% endif %}
+                    </a>
+                    {% empty %}
+                    <div class="px-6 py-8 text-center text-dark-400">
+                        <p>Aucun job recent</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -33,6 +33,15 @@ dependencies = [
 [project.scripts]
 organize-video = "organize.__main__:main"
 
+[project.optional-dependencies]
+web = [
+    "django>=5.0",
+    "django-htmx>=1.17.0",
+    "huey>=2.5.0",
+    "pillow>=10.0.0",
+    "whitenoise>=6.6.0",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",

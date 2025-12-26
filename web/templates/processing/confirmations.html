@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmations - Video Organizer{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-white">Confirmations en attente</h1>
+        <p class="text-dark-400 mt-1">{{ confirmations.count }} video{{ confirmations.count|pluralize }} a confirmer</p>
+    </div>
+
+    <!-- Confirmations Queue -->
+    <div class="space-y-4" id="confirmations-list">
+        {% for confirmation in confirmations %}
+        {% include "processing/partials/confirmation_card.html" with confirmation=confirmation %}
+        {% empty %}
+        <div class="bg-dark-800 rounded-lg border border-dark-700 px-6 py-16 text-center">
+            <svg class="w-12 h-12 mx-auto text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <h3 class="text-lg font-medium text-white mb-2">Tout est resolu!</h3>
+            <p class="text-dark-400">Aucune confirmation en attente</p>
+            <a href="{% url 'processing:job_list' %}" class="mt-4 inline-block text-primary-500 hover:text-primary-400">
+                Retour aux jobs
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Show modal if requested -->
+{% if modal_confirmation %}
+{% include "components/confirmation_modal.html" with confirmation=modal_confirmation %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-close modal on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.getElementById('modal-container').innerHTML = '';
+        }
+    });
+</script>
+{% endblock %}

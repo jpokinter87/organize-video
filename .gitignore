@@ -48,3 +48,12 @@ Thumbs.db
 
 # Project specific
 last_exec_video
+web/db.sqlite3
+web/*.sqlite3
+
+# Django web interface
+web/db.sqlite3
+web/*.sqlite3
+web/media/
+web/staticfiles/
+web/django.log

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Logs - Video Organizer{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-white">Logs</h1>
+            <p class="text-dark-400 mt-1">Historique des operations</p>
+        </div>
+        <a href="{% url 'dashboard:index' %}" class="text-dark-400 hover:text-white">
+            Retour aux statistiques
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-6 flex flex-wrap gap-3">
+        <a href="{% url 'dashboard:logs' %}"
+           class="px-3 py-1.5 rounded-lg text-sm {% if not current_level %}bg-dark-700 text-white{% else %}bg-dark-800 text-dark-300 hover:bg-dark-700{% endif %}">
+            Tous
+        </a>
+        <a href="?level=info"
+           class="px-3 py-1.5 rounded-lg text-sm {% if current_level == 'info' %}bg-blue-500/20 text-blue-400{% else %}bg-dark-800 text-dark-300 hover:bg-dark-700{% endif %}">
+            Info
+        </a>
+        <a href="?level=warning"
+           class="px-3 py-1.5 rounded-lg text-sm {% if current_level == 'warning' %}bg-yellow-500/20 text-yellow-400{% else %}bg-dark-800 text-dark-300 hover:bg-dark-700{% endif %}">
+            Warning
+        </a>
+        <a href="?level=error"
+           class="px-3 py-1.5 rounded-lg text-sm {% if current_level == 'error' %}bg-red-500/20 text-red-400{% else %}bg-dark-800 text-dark-300 hover:bg-dark-700{% endif %}">
+            Error
+        </a>
+        <a href="?level=success"
+           class="px-3 py-1.5 rounded-lg text-sm {% if current_level == 'success' %}bg-green-500/20 text-green-400{% else %}bg-dark-800 text-dark-300 hover:bg-dark-700{% endif %}">
+            Success
+        </a>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="bg-dark-800 rounded-lg border border-dark-700 overflow-hidden">
+        <div id="log-list">
+            {% include "dashboard/partials/log_list.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}

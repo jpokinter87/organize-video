@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Jobs de traitement - Video Organizer{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-white">Traitement</h1>
+            <p class="text-dark-400 mt-1">Gestion des jobs de scan</p>
+        </div>
+        <div class="flex gap-3">
+            {% if pending_count > 0 %}
+            <a href="{% url 'processing:confirmations' %}"
+               class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                {{ pending_count }} confirmation{{ pending_count|pluralize }}
+            </a>
+            {% endif %}
+            <a href="{% url 'processing:job_create' %}"
+               class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Nouveau scan
+            </a>
+        </div>
+    </div>
+
+    <!-- Jobs List -->
+    <div class="bg-dark-800 rounded-lg border border-dark-700">
+        <div class="divide-y divide-dark-700">
+            {% for job in jobs %}
+            <a href="{% url 'processing:job_detail' job.id %}"
+               class="block px-6 py-4 hover:bg-dark-700/50 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <!-- Status icon -->
+                        <div class="p-2 rounded-lg
+                            {% if job.status == 'completed' %}bg-green-500/20
+                            {% elif job.status == 'failed' %}bg-red-500/20
+                            {% elif job.status == 'processing' or job.status == 'scanning' %}bg-blue-500/20
+                            {% elif job.status == 'awaiting_confirmation' %}bg-yellow-500/20
+                            {% else %}bg-dark-600{% endif %}">
+                            {% if job.status == 'completed' %}
+                            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            {% elif job.status == 'failed' %}
+                            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            {% elif job.status == 'processing' or job.status == 'scanning' %}
+                            <svg class="w-5 h-5 text-blue-400 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <h3 class="text-white font-medium">Job #{{ job.id }}</h3>
+                            <p class="text-sm text-dark-400">
+                                {{ job.source_directory|default:"Repertoire par defaut" }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-6">
+                        <!-- Progress -->
+                        {% if job.progress_total %}
+                        <div class="text-right">
+                            <p class="text-white">{{ job.progress_processed }}/{{ job.progress_total }}</p>
+                            <div class="w-32 bg-dark-600 rounded-full h-1.5 mt-1">
+                                <div class="bg-primary-500 h-1.5 rounded-full"
+                                     style="width: {% widthratio job.progress_processed job.progress_total 100 %}%"></div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Date -->
+                        <div class="text-right text-sm">
+                            <p class="text-dark-400">{{ job.created_at|date:"d/m/Y" }}</p>
+                            <p class="text-dark-500">{{ job.created_at|time:"H:i" }}</p>
+                        </div>
+
+                        <!-- Status badge -->
+                        <span class="px-3 py-1 rounded-full text-xs font-medium
+                            {% if job.status == 'completed' %}bg-green-500/20 text-green-400
+                            {% elif job.status == 'failed' %}bg-red-500/20 text-red-400
+                            {% elif job.status == 'processing' or job.status == 'scanning' %}bg-blue-500/20 text-blue-400
+                            {% elif job.status == 'awaiting_confirmation' %}bg-yellow-500/20 text-yellow-400
+                            {% else %}bg-dark-600 text-dark-300{% endif %}">
+                            {{ job.get_status_display }}
+                        </span>
+
+                        <svg class="w-5 h-5 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="px-6 py-16 text-center">
+                <svg class="w-12 h-12 mx-auto text-dark-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                <h3 class="text-lg font-medium text-white mb-2">Aucun job</h3>
+                <p class="text-dark-400 mb-4">Lancez votre premier scan pour organiser vos videos</p>
+                <a href="{% url 'processing:job_create' %}"
+                   class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Nouveau scan
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
