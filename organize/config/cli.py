@@ -38,6 +38,7 @@ class CLIArgs:
     force_mode: bool = False
     debug: bool = False
     tag: str = ""
+    legacy: bool = False
     search_dir: Optional[Path] = None
     output_dir: Optional[Path] = None
     symlinks_dir: Optional[Path] = None
@@ -131,6 +132,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="tag to search for in debug mode"
     )
 
+    parser.add_argument(
+        '--legacy',
+        action='store_true',
+        help="utiliser le mode legacy (delegation complete vers organize.py)"
+    )
+
     return parser
 
 
@@ -211,6 +218,7 @@ def args_to_cli_args(namespace: argparse.Namespace) -> CLIArgs:
         force_mode=namespace.force,
         debug=namespace.debug,
         tag=namespace.tag or "",
+        legacy=getattr(namespace, 'legacy', False),
         search_dir=Path(namespace.input),
         output_dir=Path(namespace.output),
         symlinks_dir=Path(namespace.symlinks),

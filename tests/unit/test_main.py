@@ -130,11 +130,15 @@ class TestMain:
             assert result == 1
 
     def test_main_success_dry_run(self, tmp_path):
-        """Returns success for valid dry run."""
+        """Returns success for valid dry run with proper category structure."""
         input_dir = tmp_path / "input"
         input_dir.mkdir()
+        # Create required category subdirectory
+        (input_dir / "Films").mkdir()
 
-        with patch("organize.__main__.parse_arguments") as mock_parse:
+        with patch("organize.__main__.parse_arguments") as mock_parse, \
+             patch("organize.__main__.validate_api_keys", return_value=True), \
+             patch("organize.__main__.test_api_connectivity", return_value=True):
             mock_parse.return_value = MagicMock(
                 all=False,
                 day=7,
@@ -150,14 +154,19 @@ class TestMain:
 
             result = main()
 
+            # Returns 0 even with no videos (empty category is valid)
             assert result == 0
 
     def test_main_with_debug_tag(self, tmp_path):
-        """Handles debug mode with tag."""
+        """Handles debug mode with tag and proper category structure."""
         input_dir = tmp_path / "input"
         input_dir.mkdir()
+        # Create required category subdirectory
+        (input_dir / "Films").mkdir()
 
-        with patch("organize.__main__.parse_arguments") as mock_parse:
+        with patch("organize.__main__.parse_arguments") as mock_parse, \
+             patch("organize.__main__.validate_api_keys", return_value=True), \
+             patch("organize.__main__.test_api_connectivity", return_value=True):
             mock_parse.return_value = MagicMock(
                 all=False,
                 day=7,
