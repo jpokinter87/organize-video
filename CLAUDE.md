@@ -23,28 +23,31 @@ The primary way to run batch processing via command line.
 
 ```bash
 # Modern modular mode (default - uses organize/ package)
-python -m organize
+organize-video
 
 # Process all files
-python -m organize --all
+organize-video --all
 
 # Process files from last N days
-python -m organize -d 7
+organize-video -d 7
 
 # Dry-run mode (simulation, no file changes)
-python -m organize --dry-run
+organize-video --dry-run
 
 # Force mode (ignore hash verification)
-python -m organize --force
+organize-video --force
 
 # Custom directories
-python -m organize -i /source/path -o /temp/output -s /symlinks/path --storage /storage/path
+organize-video -i /source/path -o /temp/output -s /symlinks/path --storage /storage/path
 
 # Debug mode
-python -m organize --debug --tag "specific_file_pattern"
+organize-video --debug --tag "specific_file_pattern"
 
 # Legacy mode (delegates to organize.py directly)
-python -m organize --legacy
+organize-video --legacy
+
+# Alternative (run package directly without installation)
+python -m organize
 ```
 
 ### Mode 2: Web UI (Django)

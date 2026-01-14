@@ -26,28 +26,31 @@ Le mode console est ideal pour :
 
 ```bash
 # Mode standard (traitement des fichiers recents)
-python -m organize
+organize-video
 
 # Traitement de tous les fichiers
-python -m organize --all
+organize-video --all
 
 # Traitement des N derniers jours
-python -m organize -d 7
+organize-video -d 7
 
 # Mode simulation (aucune modification)
-python -m organize --dry-run
+organize-video --dry-run
 
 # Mode force (ignore la verification des hash)
-python -m organize --force
+organize-video --force
 
 # Repertoires personnalises
-python -m organize -i /source -o /temp -s /symlinks --storage /storage
+organize-video -i /source -o /temp -s /symlinks --storage /storage
 
 # Mode debug
-python -m organize --debug --tag "motif_fichier"
+organize-video --debug --tag "motif_fichier"
 
 # Mode legacy (utilise organize.py directement)
-python -m organize --legacy
+organize-video --legacy
+
+# Alternative sans installation (execution directe du package)
+python -m organize
 ```
 
 #### Options disponibles
