@@ -72,7 +72,7 @@ def cache_poster(video_id: int):
 
     if success:
         ProcessingLog.info(
-            job=video.job,
+            job=video.processing_job,
             video=video,
             message="Poster cached successfully"
         )
