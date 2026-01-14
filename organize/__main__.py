@@ -38,6 +38,11 @@ from organize.filesystem import (
     find_directory_for_video,
     find_symlink_and_sub_dir,
     find_similar_file,
+    aplatir_repertoire_series,
+    rename_video,
+    move_file_new_nas,
+    cleanup_directories,
+    cleanup_work_directory,
 )
 from organize.ui import ConsoleUI
 
@@ -91,15 +96,15 @@ def _get_gap_function(name: str) -> Callable:
 # MIGRATED: find_directory_for_video -> organize.filesystem.paths
 # MIGRATED: find_symlink_and_sub_dir -> organize.filesystem.paths
 # MIGRATED: find_similar_file -> organize.filesystem.paths
+# MIGRATED: aplatir_repertoire_series -> organize.filesystem.file_ops
+# MIGRATED: rename_video -> organize.filesystem.file_ops
+# MIGRATED: move_file_new_nas -> organize.filesystem.file_ops
+# MIGRATED: cleanup_directories -> organize.filesystem.file_ops
+# MIGRATED: cleanup_work_directory -> organize.filesystem.file_ops
 
 def set_fr_title_and_category(video: Video) -> Video:
     """[GAP] Set French title and category."""
     return _get_gap_function("set_fr_title_and_category")(video)
-
-
-def aplatir_repertoire_series(repertoire: Path) -> None:
-    """[GAP] Flatten series directory structure."""
-    return _get_gap_function("aplatir_repertoire_series")(repertoire)
 
 
 def create_video_list(
@@ -123,34 +128,14 @@ def process_video(video: Video, waiting_folder: Path, storage_dir: Path, symlink
     return _get_gap_function("process_video")(video, waiting_folder, storage_dir, symlinks_dir)
 
 
-def rename_video(video: Video, dict_titles: dict, sub_dir: str, work_dir: Path, dry_run: bool) -> None:
-    """[GAP] Rename video file."""
-    return _get_gap_function("rename_video")(video, dict_titles, sub_dir, work_dir, dry_run)
-
-
 def add_episodes_titles(series_videos: list, work_dir: Path, dry_run: bool) -> None:
     """[GAP] Add episode titles for series."""
     return _get_gap_function("add_episodes_titles")(series_videos, work_dir, dry_run)
 
 
-def move_file_new_nas(video: Video, storage_dir: Path, dry_run: bool) -> None:
-    """[GAP] Move file to NAS storage."""
-    return _get_gap_function("move_file_new_nas")(video, storage_dir, dry_run)
-
-
-def cleanup_directories(*directories: Path) -> None:
-    """[GAP] Clean up temporary directories."""
-    return _get_gap_function("cleanup_directories")(*directories)
-
-
 def format_undetected_filename(video: Video) -> str:
     """[GAP] Format filename for undetected videos."""
     return _get_gap_function("format_undetected_filename")(video)
-
-
-def cleanup_work_directory(work_dir: Path) -> None:
-    """[GAP] Clean up work directory."""
-    return _get_gap_function("cleanup_work_directory")(work_dir)
 
 
 # ============================================================================
@@ -338,7 +323,7 @@ def main() -> int:
 
         console.print(f"\n[bold green]{nb_videos} videos detectees[/bold green]")
 
-        # Flatten series directories [GAP]
+        # Flatten series directories [MODULAR]
         if not cli_args.dry_run:
             console.print("[blue]Aplatissement des repertoires series...[/blue]")
             aplatir_repertoire_series(cli_args.search_dir)
