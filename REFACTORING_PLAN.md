@@ -209,15 +209,22 @@ For each phase:
 - `_format_and_rename()` → `organize/pipeline/series_handler.py` (fonction interne)
 - `_get_episode_title_from_tvdb()` → `organize/pipeline/series_handler.py` (fonction interne)
 
+#### Phase 8: Main Processing Function ✅
+- `set_fr_title_and_category()` → `organize/pipeline/main_processor.py`
+- `query_movie_database()` → `organize/pipeline/main_processor.py`
+- Fonctions internes: `_get_release_date`, `_is_match`, `_get_movie_name`, `_get_unique_genres`
+
 ### Phases Restantes
 
-#### Phase 8: Main Processing Function
-- `set_fr_title_and_category()` - Fonction principale de traitement
+#### Phase 9: Final Integration
+- Nettoyage du code legacy
+- Suppression du loader GAP (désormais inutile)
+- Documentation finale
 
 ### Statistiques
 
-- **Fonctions migrées**: 31
-- **Fonctions GAP restantes**: 1
+- **Fonctions migrées**: 33+
+- **Fonctions GAP restantes**: 0
 - **Tests unitaires**: 417 passent
 - **Modules créés/étendus**:
   - `organize/api/validation.py` (nouveau)
@@ -228,4 +235,6 @@ For each phase:
   - `organize/ui/interactive.py` (nouveau)
   - `organize/pipeline/video_list.py` (nouveau)
   - `organize/pipeline/processor.py` (étendu)
+  - `organize/pipeline/series_handler.py` (étendu)
+  - `organize/pipeline/main_processor.py` (nouveau)
   - `organize/utils/database.py` (nouveau)

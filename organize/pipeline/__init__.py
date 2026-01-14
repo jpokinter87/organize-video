@@ -23,6 +23,10 @@ from organize.pipeline.video_list import (
     process_single_video,
     create_video_list,
 )
+from organize.pipeline.main_processor import (
+    query_movie_database,
+    set_fr_title_and_category,
+)
 
 __all__ = [
     "VideoProcessingResult",
@@ -42,4 +46,6 @@ __all__ = [
     "get_last_exec_readonly",
     "process_single_video",
     "create_video_list",
+    "query_movie_database",
+    "set_fr_title_and_category",
 ]

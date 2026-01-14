@@ -45,7 +45,12 @@ from organize.filesystem import (
     cleanup_work_directory,
 )
 from organize.ui import ConsoleUI
-from organize.pipeline import create_video_list, process_video, add_episodes_titles
+from organize.pipeline import (
+    create_video_list,
+    process_video,
+    add_episodes_titles,
+    set_fr_title_and_category,
+)
 
 # ============================================================================
 # GAP FUNCTIONS LOADER (Temporary - from organize.py)
@@ -112,11 +117,12 @@ def _get_gap_function(name: str) -> Callable:
 # MIGRATED: create_video_list -> organize.pipeline.video_list
 # MIGRATED: process_video -> organize.pipeline.processor
 # MIGRATED: add_episodes_titles -> organize.pipeline.series_handler
+# MIGRATED: set_fr_title_and_category -> organize.pipeline.main_processor
+# MIGRATED: query_movie_database -> organize.pipeline.main_processor
 
-def set_fr_title_and_category(video: Video) -> Video:
-    """[GAP] Set French title and category."""
-    return _get_gap_function("set_fr_title_and_category")(video)
-
+# ============================================================================
+# ALL GAP FUNCTIONS MIGRATED - organize.py can now be deprecated
+# ============================================================================
 
 # ============================================================================
 # HELPER FUNCTIONS
