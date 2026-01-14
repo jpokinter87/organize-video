@@ -2,9 +2,17 @@
 
 import re
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from loguru import logger
+from rich.console import Console
+from tqdm import tqdm
+
+if TYPE_CHECKING:
+    from organize.models.video import Video
+
+# Console pour l'affichage
+console = Console()
 
 
 def format_season_folder(season: int) -> str:
@@ -154,3 +162,191 @@ def organize_episode_by_season(
             logger.debug(f"Episode moved to season: {new_path}")
 
     return new_path
+
+
+def _format_and_rename(video_obj: "Video", dry_run: bool = False) -> None:
+    """
+    Crée le sous-répertoire Saison XX seulement si nécessaire.
+
+    Fonction interne utilisée par add_episodes_titles.
+
+    Args:
+        video_obj: Objet Video représentant l'épisode.
+        dry_run: Si True, simule uniquement l'opération.
+    """
+    if video_obj.season == 0:
+        return
+
+    # Vérifier si on est déjà dans un dossier Saison
+    current_path = video_obj.complete_path_temp_links
+    current_parent = current_path.parent
+
+    sequence_season = f'Saison {video_obj.season:02d}'
+
+    # Si le parent ne contient pas déjà "Saison", on le crée
+    if sequence_season not in str(current_parent):
+        # Remonter jusqu'au dossier de la série (celui avec l'année)
+        serie_folder = current_parent
+        while serie_folder.parent and not re.search(r'\(\d{4}\)$', serie_folder.name):
+            serie_folder = serie_folder.parent
+
+        # Créer le dossier saison dans le dossier série
+        complete_path_with_season = serie_folder / sequence_season
+        new_file_path = complete_path_with_season / video_obj.formatted_filename
+
+        if dry_run:
+            logger.debug(f"SIMULATION - Création saison: {complete_path_with_season}")
+            video_obj.complete_path_temp_links = new_file_path
+        else:
+            complete_path_with_season.mkdir(exist_ok=True)
+            if current_path.exists():
+                current_path.rename(new_file_path)
+                video_obj.complete_path_temp_links = new_file_path
+                logger.debug(f"Fichier déplacé vers saison: {new_file_path}")
+            else:
+                video_obj.complete_path_temp_links = new_file_path
+    else:
+        # On est déjà dans le bon dossier Saison, juste mettre à jour le nom
+        if not dry_run and current_path.exists():
+            new_path = current_parent / video_obj.formatted_filename
+            if new_path != current_path:
+                current_path.rename(new_path)
+                video_obj.complete_path_temp_links = new_path
+
+
+def _get_episode_title_from_tvdb(
+    video_obj: "Video",
+    serial: int,
+    dry_run: bool = False
+) -> Tuple["Video", int]:
+    """
+    Recherche le titre de l'épisode via l'API TVDB.
+
+    Fonction interne utilisée par add_episodes_titles.
+
+    Args:
+        video_obj: Objet Video représentant l'épisode.
+        serial: ID de la série TVDB (0 si inconnu).
+        dry_run: Si True, simule uniquement l'opération.
+
+    Returns:
+        Tuple (video mise à jour, ID de série).
+    """
+    import os
+    try:
+        import tvdb_api
+    except ImportError:
+        logger.warning("tvdb_api non installé, impossible de récupérer les titres d'épisodes")
+        return video_obj, serial
+
+    from organize.api import CacheDB
+    from organize.classification.text_processing import normalize
+
+    TVDB_API_KEY = os.getenv("TVDB_API_KEY", "")
+
+    if not TVDB_API_KEY:
+        logger.warning("Clé API TVDB manquante, impossible de récupérer les titres d'épisodes")
+        return video_obj, serial
+
+    cache = CacheDB()
+
+    # Vérifier le cache d'abord
+    cached_data = cache.get_tvdb(serial, video_obj.season, video_obj.episode)
+    if cached_data and cached_data.get("episodeName"):
+        episode_name = cached_data["episodeName"]
+        ext = video_obj.complete_path_original.suffix
+        video_obj.formatted_filename = (
+            f"{video_obj.title_fr} ({video_obj.date_film}) {video_obj.sequence} "
+            f"{episode_name} - {video_obj.spec}{ext}"
+        )
+        if dry_run:
+            logger.debug(f"SIMULATION - Titre épisode (cache): {episode_name}")
+        cache.close()
+        return video_obj, serial
+
+    # Recherche réelle même en dry_run pour avoir les vrais titres
+    if dry_run:
+        console.print(
+            f"[dim]🔍 Recherche du titre pour {video_obj.title_fr} S{video_obj.season:02d}E{video_obj.episode:02d}"
+            f"...[/dim]")
+
+    databases = [
+        tvdb_api.Tvdb(apikey=TVDB_API_KEY, language='fr', interactive=False),
+        tvdb_api.Tvdb(apikey=TVDB_API_KEY, language='en', interactive=False)
+    ]
+
+    for lang_index, data_serie in enumerate(databases):
+        try:
+            if not serial:
+                try:
+                    serial = data_serie[video_obj.title_fr]['id']
+                    if dry_run:
+                        logger.debug(f"SIMULATION - Série trouvée avec ID: {serial}")
+                except (tvdb_api.tvdb_shownotfound, KeyError):
+                    logger.debug(
+                        f"Série {video_obj.title_fr} non trouvée en {'français' if lang_index == 0 else 'anglais'}")
+                    continue
+
+            data_episode = data_serie[serial][video_obj.season][video_obj.episode]
+            titre_episode = data_episode.get('episodeName', '')
+
+            if titre_episode:
+                titre_episode = normalize(titre_episode)
+                ext = video_obj.complete_path_original.suffix
+                video_obj.formatted_filename = (
+                    f'{video_obj.title_fr} ({video_obj.date_film}) {video_obj.sequence} '
+                    f'{titre_episode} - {video_obj.spec}{ext}'
+                )
+
+                # Sauvegarder en cache
+                cache.set_tvdb(serial, video_obj.season, video_obj.episode, {"episodeName": titre_episode})
+
+                if dry_run:
+                    console.print(f"[dim]✅ Trouvé: {titre_episode}[/dim]")
+                break
+
+        except (tvdb_api.tvdb_shownotfound, tvdb_api.tvdb_episodenotfound,
+                tvdb_api.tvdb_seasonnotfound) as e:
+            logger.warning(f'{video_obj.title_fr}: {type(e).__name__}')
+            continue
+        except Exception as e:
+            logger.warning(f'Erreur TVDB pour {video_obj.title_fr}: {e}')
+            continue
+
+    cache.close()
+    return video_obj, serial
+
+
+def add_episodes_titles(
+    list_of_videos: List["Video"],
+    rep_destination: Path,
+    dry_run: bool = False
+) -> None:
+    """
+    Ajoute les titres d'épisodes et organise par saisons.
+
+    Pour chaque épisode de série dans la liste, recherche le titre
+    de l'épisode via l'API TVDB et renomme le fichier en conséquence.
+    Organise également les fichiers dans des dossiers par saison.
+
+    Args:
+        list_of_videos: Liste des objets Video à traiter.
+        rep_destination: Chemin du répertoire de destination.
+        dry_run: Si True, simule uniquement les opérations.
+    """
+    # Traitement des séries avec barre de progression
+    done = {}
+    series_to_process = [video for video in list_of_videos if video.is_serie() and video.season > 0]
+
+    if not series_to_process:
+        return
+
+    mode_text = "SIMULATION - " if dry_run else ""
+    with tqdm(series_to_process, desc=f"{mode_text}Titres d'épisodes", unit="épisode") as pbar:
+        for video in pbar:
+            pbar.set_postfix_str(f"{video.title_fr} S{video.season:02d}E{video.episode:02d}")
+
+            num_serie = done.get(video.title_fr, 0)
+            video, num_serie = _get_episode_title_from_tvdb(video, num_serie, dry_run)
+            done[video.title_fr] = num_serie
+            _format_and_rename(video, dry_run)

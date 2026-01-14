@@ -204,18 +204,20 @@ For each phase:
 - `add_hash_to_db()` → `organize/utils/database.py`
 - `hash_exists_in_db()` → `organize/utils/database.py`
 
-### Phases Restantes
+#### Phase 7: Series Handler ✅
+- `add_episodes_titles()` → `organize/pipeline/series_handler.py`
+- `_format_and_rename()` → `organize/pipeline/series_handler.py` (fonction interne)
+- `_get_episode_title_from_tvdb()` → `organize/pipeline/series_handler.py` (fonction interne)
 
-#### Phase 7: Series Handler
-- `add_episodes_titles()` - Titres d'épisodes TVDB
+### Phases Restantes
 
 #### Phase 8: Main Processing Function
 - `set_fr_title_and_category()` - Fonction principale de traitement
 
 ### Statistiques
 
-- **Fonctions migrées**: 28
-- **Fonctions GAP restantes**: 2
+- **Fonctions migrées**: 31
+- **Fonctions GAP restantes**: 1
 - **Tests unitaires**: 417 passent
 - **Modules créés/étendus**:
   - `organize/api/validation.py` (nouveau)
