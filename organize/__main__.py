@@ -4,18 +4,17 @@ This module provides the command-line entry point for the video organization too
 Run with: python -m organize
 
 Supports:
-- Modern modular mode (default): Uses refactored modules with gap imports
+- Modern modular mode (default): Uses fully modular components
 - Legacy mode (--legacy flag): Delegates entirely to organize.py
 """
 
 import sys
 from pathlib import Path
-from typing import Optional, Any, Callable
 
 from loguru import logger
 
 # ============================================================================
-# MODULAR IMPORTS (Available Components)
+# MODULAR IMPORTS (All Components)
 # ============================================================================
 from organize.config import (
     CLIArgs,
@@ -51,78 +50,6 @@ from organize.pipeline import (
     add_episodes_titles,
     set_fr_title_and_category,
 )
-
-# ============================================================================
-# GAP FUNCTIONS LOADER (Temporary - from organize.py)
-# ============================================================================
-# These will be removed progressively as modules are completed
-_organize_module = None  # Lazy-loaded module reference
-
-
-def _load_organize_module():
-    """Lazy-load organize.py module for gap functions."""
-    global _organize_module
-    if _organize_module is None:
-        import importlib.util
-        organize_py = Path(__file__).parent.parent / "organize.py"
-        if not organize_py.exists():
-            raise FileNotFoundError(f"organize.py not found at {organize_py}")
-
-        # Add parent directory to path for imports
-        parent_dir = str(organize_py.parent)
-        if parent_dir not in sys.path:
-            sys.path.insert(0, parent_dir)
-
-        spec = importlib.util.spec_from_file_location("organize_original", organize_py)
-        _organize_module = importlib.util.module_from_spec(spec)
-        # Register module in sys.modules so multiprocessing can pickle functions
-        sys.modules["organize_original"] = _organize_module
-        spec.loader.exec_module(_organize_module)
-    return _organize_module
-
-
-def _get_gap_function(name: str) -> Callable:
-    """Get a gap function from organize.py."""
-    module = _load_organize_module()
-    func = getattr(module, name, None)
-    if func is None:
-        raise AttributeError(f"Function '{name}' not found in organize.py")
-    return func
-
-
-# ============================================================================
-# GAP FUNCTION WRAPPERS
-# These are temporary and will be replaced by modular implementations
-# Each wrapper is marked with [GAP] to identify migration targets
-# ============================================================================
-
-# MIGRATED: validate_api_keys -> organize.api.validation
-# MIGRATED: test_api_connectivity -> organize.api.validation
-# MIGRATED: media_info -> organize.classification.media_info
-# MIGRATED: find_directory_for_video -> organize.filesystem.paths
-# MIGRATED: find_symlink_and_sub_dir -> organize.filesystem.paths
-# MIGRATED: find_similar_file -> organize.filesystem.paths
-# MIGRATED: aplatir_repertoire_series -> organize.filesystem.file_ops
-# MIGRATED: rename_video -> organize.filesystem.file_ops
-# MIGRATED: move_file_new_nas -> organize.filesystem.file_ops
-# MIGRATED: cleanup_directories -> organize.filesystem.file_ops
-# MIGRATED: cleanup_work_directory -> organize.filesystem.file_ops
-# MIGRATED: format_undetected_filename -> organize.classification.text_processing
-# MIGRATED: extract_title_from_filename -> organize.classification.text_processing
-# MIGRATED: launch_video_player -> organize.ui.interactive
-# MIGRATED: wait_for_user_after_viewing -> organize.ui.interactive
-# MIGRATED: choose_genre_manually -> organize.ui.interactive
-# MIGRATED: user_confirms_match -> organize.ui.interactive
-# MIGRATED: handle_not_found_error -> organize.ui.interactive
-# MIGRATED: create_video_list -> organize.pipeline.video_list
-# MIGRATED: process_video -> organize.pipeline.processor
-# MIGRATED: add_episodes_titles -> organize.pipeline.series_handler
-# MIGRATED: set_fr_title_and_category -> organize.pipeline.main_processor
-# MIGRATED: query_movie_database -> organize.pipeline.main_processor
-
-# ============================================================================
-# ALL GAP FUNCTIONS MIGRATED - organize.py can now be deprecated
-# ============================================================================
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -210,12 +137,27 @@ def run_legacy_mode() -> int:
     Returns:
         Exit code from legacy main().
     """
+    import importlib.util
+
     logger.info("Running in legacy mode (organize.py)")
     console = ConsoleUI()
     console.print("[yellow]Mode legacy active - utilisation de organize.py[/yellow]")
 
     try:
-        organize_module = _load_organize_module()
+        organize_py = Path(__file__).parent.parent / "organize.py"
+        if not organize_py.exists():
+            console.print("[red]organize.py non trouvé - mode legacy indisponible[/red]")
+            return 1
+
+        # Add parent directory to path for imports
+        parent_dir = str(organize_py.parent)
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+
+        spec = importlib.util.spec_from_file_location("organize_original", organize_py)
+        organize_module = importlib.util.module_from_spec(spec)
+        sys.modules["organize_original"] = organize_module
+        spec.loader.exec_module(organize_module)
         organize_module.main()
         return 0
     except KeyboardInterrupt:
