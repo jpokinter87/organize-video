@@ -28,7 +28,7 @@ from organize.config import (
 from organize.config.context import execution_context
 from organize.models import Video
 from organize.api import CacheDB, validate_api_keys, test_api_connectivity
-from organize.classification import media_info
+from organize.classification import media_info, format_undetected_filename
 from organize.filesystem import (
     get_available_categories,
     count_videos,
@@ -101,6 +101,13 @@ def _get_gap_function(name: str) -> Callable:
 # MIGRATED: move_file_new_nas -> organize.filesystem.file_ops
 # MIGRATED: cleanup_directories -> organize.filesystem.file_ops
 # MIGRATED: cleanup_work_directory -> organize.filesystem.file_ops
+# MIGRATED: format_undetected_filename -> organize.classification.text_processing
+# MIGRATED: extract_title_from_filename -> organize.classification.text_processing
+# MIGRATED: launch_video_player -> organize.ui.interactive
+# MIGRATED: wait_for_user_after_viewing -> organize.ui.interactive
+# MIGRATED: choose_genre_manually -> organize.ui.interactive
+# MIGRATED: user_confirms_match -> organize.ui.interactive
+# MIGRATED: handle_not_found_error -> organize.ui.interactive
 
 def set_fr_title_and_category(video: Video) -> Video:
     """[GAP] Set French title and category."""
@@ -131,11 +138,6 @@ def process_video(video: Video, waiting_folder: Path, storage_dir: Path, symlink
 def add_episodes_titles(series_videos: list, work_dir: Path, dry_run: bool) -> None:
     """[GAP] Add episode titles for series."""
     return _get_gap_function("add_episodes_titles")(series_videos, work_dir, dry_run)
-
-
-def format_undetected_filename(video: Video) -> str:
-    """[GAP] Format filename for undetected videos."""
-    return _get_gap_function("format_undetected_filename")(video)
 
 
 # ============================================================================

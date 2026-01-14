@@ -4,6 +4,8 @@ from organize.classification.text_processing import (
     normalize,
     remove_article,
     normalize_accents,
+    extract_title_from_filename,
+    format_undetected_filename,
 )
 from organize.classification.type_detector import (
     type_of_video,
@@ -24,6 +26,8 @@ __all__ = [
     "normalize",
     "remove_article",
     "normalize_accents",
+    "extract_title_from_filename",
+    "format_undetected_filename",
     "type_of_video",
     "extract_file_infos",
     "suggest_genre_mapping",
