@@ -35,6 +35,9 @@ from organize.filesystem import (
     copy_tree,
     verify_symlinks,
     setup_working_directories,
+    find_directory_for_video,
+    find_symlink_and_sub_dir,
+    find_similar_file,
 )
 from organize.ui import ConsoleUI
 
@@ -85,6 +88,9 @@ def _get_gap_function(name: str) -> Callable:
 # MIGRATED: validate_api_keys -> organize.api.validation
 # MIGRATED: test_api_connectivity -> organize.api.validation
 # MIGRATED: media_info -> organize.classification.media_info
+# MIGRATED: find_directory_for_video -> organize.filesystem.paths
+# MIGRATED: find_symlink_and_sub_dir -> organize.filesystem.paths
+# MIGRATED: find_similar_file -> organize.filesystem.paths
 
 def set_fr_title_and_category(video: Video) -> Video:
     """[GAP] Set French title and category."""
@@ -120,16 +126,6 @@ def process_video(video: Video, waiting_folder: Path, storage_dir: Path, symlink
 def rename_video(video: Video, dict_titles: dict, sub_dir: str, work_dir: Path, dry_run: bool) -> None:
     """[GAP] Rename video file."""
     return _get_gap_function("rename_video")(video, dict_titles, sub_dir, work_dir, dry_run)
-
-
-def find_symlink_and_sub_dir(video: Video, symlinks_dir: Path) -> tuple:
-    """[GAP] Find symlink and subdirectory for video."""
-    return _get_gap_function("find_symlink_and_sub_dir")(video, symlinks_dir)
-
-
-def find_directory_for_video(video: Video, root_folder: Path) -> Path:
-    """[GAP] Find directory for video placement."""
-    return _get_gap_function("find_directory_for_video")(video, root_folder)
 
 
 def add_episodes_titles(series_videos: list, work_dir: Path, dry_run: bool) -> None:
