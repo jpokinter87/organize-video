@@ -27,7 +27,8 @@ from organize.config import (
 )
 from organize.config.context import execution_context
 from organize.models import Video
-from organize.api import CacheDB
+from organize.api import CacheDB, validate_api_keys, test_api_connectivity
+from organize.classification import media_info
 from organize.filesystem import (
     get_available_categories,
     count_videos,
@@ -60,6 +61,8 @@ def _load_organize_module():
 
         spec = importlib.util.spec_from_file_location("organize_original", organize_py)
         _organize_module = importlib.util.module_from_spec(spec)
+        # Register module in sys.modules so multiprocessing can pickle functions
+        sys.modules["organize_original"] = _organize_module
         spec.loader.exec_module(_organize_module)
     return _organize_module
 
@@ -79,20 +82,9 @@ def _get_gap_function(name: str) -> Callable:
 # Each wrapper is marked with [GAP] to identify migration targets
 # ============================================================================
 
-def validate_api_keys() -> bool:
-    """[GAP] Validate API keys presence."""
-    return _get_gap_function("validate_api_keys")()
-
-
-def test_api_connectivity() -> bool:
-    """[GAP] Test API connectivity."""
-    return _get_gap_function("test_api_connectivity")()
-
-
-def media_info(video: Video) -> str:
-    """[GAP] Extract technical specs via MediaInfo."""
-    return _get_gap_function("media_info")(video)
-
+# MIGRATED: validate_api_keys -> organize.api.validation
+# MIGRATED: test_api_connectivity -> organize.api.validation
+# MIGRATED: media_info -> organize.classification.media_info
 
 def set_fr_title_and_category(video: Video) -> Video:
     """[GAP] Set French title and category."""
@@ -317,12 +309,12 @@ def main() -> int:
         # Display configuration
         display_configuration(cli_args, console)
 
-        # Validate API keys [GAP]
+        # Validate API keys [MODULAR]
         if not validate_api_keys():
             console.print("[red]Erreur: Cles API manquantes (TMDB_API_KEY, TVDB_API_KEY)[/red]")
             return 1
 
-        # Test API connectivity [GAP]
+        # Test API connectivity [MODULAR]
         if not test_api_connectivity():
             console.print("[red]Erreur: Impossible de se connecter aux APIs[/red]")
             return 1

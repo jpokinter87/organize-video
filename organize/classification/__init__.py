@@ -15,6 +15,10 @@ from organize.classification.genre_classifier import (
     classify_movie,
     classify_animation,
 )
+from organize.classification.media_info import (
+    extract_media_info,
+    media_info,
+)
 
 __all__ = [
     "normalize",
@@ -26,4 +30,6 @@ __all__ = [
     "filter_supported_genres",
     "classify_movie",
     "classify_animation",
+    "extract_media_info",
+    "media_info",
 ]
