@@ -1,4 +1,4 @@
-"""Path resolution functions for video organization."""
+"""Fonctions de résolution de chemins pour l'organisation des vidéos."""
 
 import re
 from pathlib import Path
@@ -11,74 +11,74 @@ if TYPE_CHECKING:
 
 
 class SubfolderCache:
-    """Simple cache for subfolder lookups to avoid repeated filesystem traversals."""
+    """Cache simple pour les recherches de sous-dossiers afin d'éviter les parcours répétés du système de fichiers."""
 
     def __init__(self):
         self._cache: Dict[Tuple[str, str], Path] = {}
 
     def get(self, key: Tuple[str, str]) -> Optional[Path]:
-        """Get cached path for a key."""
+        """Récupère le chemin en cache pour une clé."""
         return self._cache.get(key)
 
     def set(self, key: Tuple[str, str], value: Path) -> None:
-        """Cache a path for a key."""
+        """Met en cache un chemin pour une clé."""
         self._cache[key] = value
 
     def clear(self) -> None:
-        """Clear all cached entries."""
+        """Efface toutes les entrées en cache."""
         self._cache.clear()
 
 
-# Module-level caches
+# Caches au niveau du module
 subfolder_cache = SubfolderCache()
 series_subfolder_cache = SubfolderCache()
 
 
 def in_range(value: str, start: str, end: str) -> bool:
     """
-    Check if a value is in an alphabetical range.
+    Vérifie si une valeur est dans une plage alphabétique.
 
     Args:
-        value: Value to check.
-        start: Start of range (inclusive).
-        end: End of range (inclusive).
+        value: Valeur à vérifier.
+        start: Début de la plage (inclusif).
+        end: Fin de la plage (inclusif).
 
     Returns:
-        True if value is within range.
+        True si la valeur est dans la plage.
     """
     return start <= value <= end
 
 
 def inflate(start: str, end: str, length: int) -> Tuple[str, str]:
     """
-    Extend strings to a given length for comparison.
+    Étend les chaînes à une longueur donnée pour la comparaison.
 
-    Pads start with 'a' and end with 'z' to fill to length.
+    Complète start avec 'a' et end avec 'z' jusqu'à la longueur cible.
 
     Args:
-        start: Start string.
-        end: End string.
-        length: Target length.
+        start: Chaîne de début.
+        end: Chaîne de fin.
+        length: Longueur cible.
 
     Returns:
-        Tuple of (padded_start, padded_end).
+        Tuple de (start_complété, end_complété).
     """
     return start.ljust(length, 'a'), end.ljust(length, 'z')
 
 
 def find_matching_folder(root_folder: Path, title: str) -> Path:
     """
-    Find the deepest matching folder for a title.
+    Trouve le dossier correspondant le plus profond pour un titre.
 
-    Looks for folders with range patterns like "a-m" or "n-z"
-    and finds the one that contains the title alphabetically.
+    Recherche les dossiers avec des motifs de plage comme "a-m" ou "n-z"
+    et trouve celui qui contient le titre alphabétiquement.
 
     Args:
-        root_folder: Root folder to search in.
-        title: Title to match.
+        root_folder: Dossier racine dans lequel chercher.
+        title: Titre à faire correspondre.
 
     Returns:
-        Path to the deepest matching folder, or root_folder if no match.
+        Chemin vers le dossier correspondant le plus profond, ou root_folder si aucune correspondance.
     """
     title_lower = title.lower()
     inflated_ranges: Dict[str, Tuple[str, str]] = {}
@@ -93,7 +93,7 @@ def find_matching_folder(root_folder: Path, title: str) -> Path:
 
                 item_name_lower = item.name.lower()
 
-                # Check for range pattern like "a-m"
+                # Vérifier le motif de plage comme "a-m"
                 if '-' in item_name_lower and ' - ' not in item_name_lower:
                     parts = item_name_lower.split('-', 1)
                     if len(parts) == 2:
@@ -110,12 +110,12 @@ def find_matching_folder(root_folder: Path, title: str) -> Path:
                         if not in_range(remaining_title[:compare_length], range_start[:compare_length], range_end[:compare_length]):
                             continue
 
-                        # Found a matching range folder, go deeper
+                        # Dossier de plage correspondant trouvé, aller plus profond
                         deeper = find_deepest(item, remaining_title)
                         return deeper if deeper != item else item
 
         except (FileNotFoundError, PermissionError) as e:
-            logger.warning(f"Error accessing folder {current_folder}: {e}")
+            logger.warning(f"Erreur d'accès au dossier {current_folder}: {e}")
 
         return best_match
 
@@ -124,24 +124,24 @@ def find_matching_folder(root_folder: Path, title: str) -> Path:
 
 def find_directory_for_video(video: "Video", root_folder: Path) -> Path:
     """
-    Determine the appropriate subfolder for a video title.
+    Détermine le sous-dossier approprié pour un titre de vidéo.
 
-    Uses alphabetical range matching to find the deepest matching folder.
-    Results are cached to avoid repeated filesystem traversals.
+    Utilise la correspondance de plage alphabétique pour trouver le dossier correspondant le plus profond.
+    Les résultats sont mis en cache pour éviter les parcours répétés du système de fichiers.
 
     Args:
-        video: Video object with title information.
-        root_folder: Root folder to search in.
+        video: Objet Video avec les informations de titre.
+        root_folder: Dossier racine dans lequel chercher.
 
     Returns:
-        Path to the appropriate subfolder.
+        Chemin vers le sous-dossier approprié.
     """
     cache_key = (str(video.complete_path_original), str(root_folder))
     cached_result = subfolder_cache.get(cache_key)
     if cached_result:
         return cached_result
 
-    # Special case for undetected FILMS only
+    # Cas spécial pour les FILMS non détectés uniquement
     if (not video.title_fr or video.title_fr.strip() == '') and video.is_film_anim():
         non_detectes_dir = root_folder / 'non détectés'
         subfolder_cache.set(cache_key, non_detectes_dir)
@@ -180,13 +180,13 @@ def find_directory_for_video(video: "Video", root_folder: Path) -> Path:
                 deeper_match = find_deepest_matching_folder(item, remaining_title)
                 return deeper_match if deeper_match != item else item
         except (FileNotFoundError, PermissionError) as e:
-            logger.warning(f"Error accessing folder {current_folder}: {e}")
+            logger.warning(f"Erreur d'accès au dossier {current_folder}: {e}")
 
         return best_match
 
     result = find_deepest_matching_folder(root_folder, title)
 
-    # For series without matching folder, use '#' folder
+    # Pour les séries sans dossier correspondant, utiliser le dossier '#'
     if video.type_file == 'Séries' and result == root_folder:
         result = root_folder / '#'
 
@@ -196,14 +196,14 @@ def find_directory_for_video(video: "Video", root_folder: Path) -> Path:
 
 def find_symlink_and_sub_dir(video: "Video", symlinks_dir: Path) -> Tuple[Path, Path]:
     """
-    Find the appropriate symlink directory and subdirectory for a video.
+    Trouve le répertoire de symlinks et le sous-répertoire appropriés pour une vidéo.
 
     Args:
-        video: Video object with type and genre information.
-        symlinks_dir: Base symlinks directory.
+        video: Objet Video avec les informations de type et de genre.
+        symlinks_dir: Répertoire de base des symlinks.
 
     Returns:
-        Tuple of (complete_dir_symlinks, sub_directory).
+        Tuple de (complete_dir_symlinks, sub_directory).
     """
     if video.is_film_anim():
         target = symlinks_dir / 'Films' / video.genre
@@ -213,11 +213,11 @@ def find_symlink_and_sub_dir(video: "Video", symlinks_dir: Path) -> Tuple[Path, 
     video.complete_dir_symlinks = find_directory_for_video(video, target)
 
     try:
-        # Extract relative path from symlinks directory
+        # Extraction du chemin relatif à partir du répertoire symlinks
         relative_path = video.complete_dir_symlinks.relative_to(symlinks_dir)
         video.sub_directory = relative_path
     except ValueError as e:
-        logger.warning(f'Error extracting relative path: {e}')
+        logger.warning(f"Erreur lors de l'extraction du chemin relatif: {e}")
         video.sub_directory = Path('')
 
     return video.complete_dir_symlinks, video.sub_directory
@@ -230,16 +230,16 @@ def find_similar_file(
     year_tolerance: int = 1
 ) -> Optional[Path]:
     """
-    Search for a similar file in the storage directory structure.
+    Recherche un fichier similaire dans la structure du répertoire de stockage.
 
     Args:
-        video: Video to find similar file for.
-        storage_dir: Root storage directory.
-        similarity_threshold: Minimum similarity score (0-100).
-        year_tolerance: Maximum year difference allowed.
+        video: Vidéo pour laquelle chercher un fichier similaire.
+        storage_dir: Répertoire de stockage racine.
+        similarity_threshold: Score de similarité minimum (0-100).
+        year_tolerance: Différence d'année maximale autorisée.
 
     Returns:
-        Path to similar file if found, None otherwise.
+        Chemin vers le fichier similaire si trouvé, None sinon.
     """
     if video.is_animation():
         folder = storage_dir / 'Films'
@@ -267,27 +267,27 @@ def find_similar_file_in_folder(
     year_tolerance: int = 1
 ) -> Optional[Path]:
     """
-    Search for a similar file in a specific folder.
+    Recherche un fichier similaire dans un dossier spécifique.
 
-    Uses fuzzy string matching to find files with similar titles.
+    Utilise la correspondance floue de chaînes pour trouver des fichiers avec des titres similaires.
 
     Args:
-        video: Video to find similar file for.
-        sub_folder: Folder to search in.
-        similarity_threshold: Minimum similarity score (0-100).
-        year_tolerance: Maximum year difference allowed.
+        video: Vidéo pour laquelle chercher un fichier similaire.
+        sub_folder: Dossier dans lequel chercher.
+        similarity_threshold: Score de similarité minimum (0-100).
+        year_tolerance: Différence d'année maximale autorisée.
 
     Returns:
-        Path to best matching file if found, None otherwise.
+        Chemin vers le meilleur fichier correspondant si trouvé, None sinon.
     """
     try:
         from rapidfuzz import fuzz
     except ImportError:
-        logger.warning("rapidfuzz not available, skipping similarity check")
+        logger.warning("rapidfuzz non disponible, vérification de similarité ignorée")
         return None
 
     def extract_title_year(filename: Path) -> Tuple[Optional[str], Optional[int]]:
-        """Extract title and year from filename like 'Title (2020).mkv'."""
+        """Extrait le titre et l'année d'un nom de fichier comme 'Titre (2020).mkv'."""
         filename_str = filename.name
         match = re.match(r"(.+?)\s*\((\d{4})\)", filename_str)
         if match:
@@ -325,12 +325,12 @@ def find_similar_file_in_folder(
             best_match = file
             highest_similarity = similarity
     except (FileNotFoundError, PermissionError) as e:
-        logger.warning(f"Error accessing folder {sub_folder}: {e}")
+        logger.warning(f"Erreur d'accès au dossier {sub_folder}: {e}")
 
     return best_match
 
 
 def clear_caches() -> None:
-    """Clear all path resolution caches."""
+    """Efface tous les caches de résolution de chemins."""
     subfolder_cache.clear()
     series_subfolder_cache.clear()

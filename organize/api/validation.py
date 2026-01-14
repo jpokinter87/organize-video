@@ -1,4 +1,4 @@
-"""API validation and connectivity testing."""
+"""Validation des APIs et test de connectivité."""
 
 import os
 from typing import Optional
@@ -11,13 +11,13 @@ from organize.ui.console import ConsoleUI
 
 def get_api_key(key_name: str) -> Optional[str]:
     """
-    Get an API key from environment variables.
+    Récupère une clé API depuis les variables d'environnement.
 
     Args:
-        key_name: Name of the environment variable.
+        key_name: Nom de la variable d'environnement.
 
     Returns:
-        The API key value or None if not set.
+        La valeur de la clé API ou None si non définie.
     """
     return os.getenv(key_name)
 
@@ -26,15 +26,15 @@ def validate_api_keys(
     console: Optional[ConsoleUI] = None
 ) -> bool:
     """
-    Validate the presence of required API keys.
+    Valide la présence des clés API requises.
 
-    Checks for TMDB_API_KEY and TVDB_API_KEY in environment variables.
+    Vérifie TMDB_API_KEY et TVDB_API_KEY dans les variables d'environnement.
 
     Args:
-        console: Optional ConsoleUI for displaying messages.
+        console: ConsoleUI optionnelle pour l'affichage des messages.
 
     Returns:
-        True if all required keys are present, False otherwise.
+        True si toutes les clés requises sont présentes, False sinon.
     """
     missing_keys = []
 
@@ -47,10 +47,10 @@ def validate_api_keys(
         missing_keys.append("TVDB_API_KEY")
 
     if missing_keys:
-        logger.error(f"Missing API keys: {', '.join(missing_keys)}")
+        logger.error(f"Clés API manquantes: {', '.join(missing_keys)}")
         if console:
-            console.print_error(f"Missing API keys: {', '.join(missing_keys)}")
-            console.print_warning("Please add them to your .env file")
+            console.print_error(f"Clés API manquantes: {', '.join(missing_keys)}")
+            console.print_warning("Veuillez les ajouter dans le fichier .env")
         return False
 
     return True
@@ -62,20 +62,20 @@ def test_api_connectivity(
     tvdb_api_key: Optional[str] = None
 ) -> bool:
     """
-    Test connectivity to TMDB and TVDB APIs.
+    Teste la connectivité aux APIs TMDB et TVDB.
 
     Args:
-        console: Optional ConsoleUI for displaying messages.
-        tmdb_api_key: TMDB API key (uses env var if not provided).
-        tvdb_api_key: TVDB API key (uses env var if not provided).
+        console: ConsoleUI optionnelle pour l'affichage des messages.
+        tmdb_api_key: Clé API TMDB (utilise la variable d'env si non fournie).
+        tvdb_api_key: Clé API TVDB (utilise la variable d'env si non fournie).
 
     Returns:
-        True if all API connections succeed, False otherwise.
+        True si toutes les connexions API réussissent, False sinon.
     """
     if console:
-        console.print_info("Testing API connectivity...")
+        console.print_info("Test de connectivité aux APIs...")
 
-    # Get API keys from environment if not provided
+    # Récupérer les clés API depuis l'environnement si non fournies
     tmdb_key = tmdb_api_key or get_api_key("TMDB_API_KEY")
     tvdb_key = tvdb_api_key or get_api_key("TVDB_API_KEY")
 
@@ -84,15 +84,15 @@ def test_api_connectivity(
     test_result = tmdb.find_content("test", "Films")
 
     if test_result is None:
-        logger.error("Unable to connect to TMDB API")
+        logger.error("Impossible de se connecter à l'API TMDB")
         if console:
-            console.print_error("TMDB connection failed")
+            console.print_error("Connexion TMDB échouée")
         return False
 
     if console:
-        console.print_success("TMDB connection successful")
+        console.print_success("Connexion TMDB réussie")
 
-    # Test TVDB (optional - used only for episode titles)
+    # Test TVDB (optionnel - utilisé uniquement pour les titres d'épisodes)
     if tvdb_key:
         try:
             import tvdb_api
@@ -101,16 +101,16 @@ def test_api_connectivity(
                 language='fr',
                 interactive=False
             )
-            # Simple test - try to access the API
-            # If this fails, TVDB will log a warning but not stop processing
+            # Test simple - essayer d'accéder à l'API
+            # En cas d'échec, TVDB affichera un avertissement mais ne stoppera pas le traitement
             if console:
-                console.print_success("TVDB connection successful")
+                console.print_success("Connexion TVDB réussie")
         except Exception as e:
-            logger.warning(f"TVDB connection test failed: {e}")
+            logger.warning(f"Test de connexion TVDB échoué: {e}")
             if console:
-                console.print_warning(f"TVDB connection warning: {e}")
-                console.print_info("Episode titles may not be available")
-            # Don't return False - TVDB is optional
+                console.print_warning(f"Avertissement connexion TVDB: {e}")
+                console.print_info("Les titres d'épisodes pourraient ne pas être disponibles")
+            # Ne pas retourner False - TVDB est optionnel
 
     return True
 
@@ -119,15 +119,15 @@ def ensure_api_ready(
     console: Optional[ConsoleUI] = None
 ) -> bool:
     """
-    Ensure APIs are configured and accessible.
+    S'assure que les APIs sont configurées et accessibles.
 
-    Combines validation and connectivity testing.
+    Combine la validation et le test de connectivité.
 
     Args:
-        console: Optional ConsoleUI for displaying messages.
+        console: ConsoleUI optionnelle pour l'affichage des messages.
 
     Returns:
-        True if APIs are ready to use, False otherwise.
+        True si les APIs sont prêtes à être utilisées, False sinon.
     """
     if not validate_api_keys(console):
         return False

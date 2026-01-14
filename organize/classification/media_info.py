@@ -1,4 +1,4 @@
-"""MediaInfo extraction for video technical specs."""
+"""Extraction des informations techniques MediaInfo pour les vidéos."""
 
 import re
 from typing import List, TYPE_CHECKING
@@ -11,44 +11,44 @@ if TYPE_CHECKING:
 
 def _is_french(languages: List[str]) -> bool:
     """
-    Check if any language in the list indicates French.
+    Vérifie si une langue de la liste indique le français.
 
     Args:
-        languages: List of language strings to check.
+        languages: Liste de chaînes de langues à vérifier.
 
     Returns:
-        True if French is detected in any language string.
+        True si le français est détecté dans l'une des chaînes.
     """
     return any(re.search(r'french', item.lower()) for item in languages)
 
 
 def extract_media_info(video: "Video") -> str:
     """
-    Extract technical specifications from a video file using MediaInfo.
+    Extrait les spécifications techniques d'un fichier vidéo via MediaInfo.
 
-    Extracts:
-    - Language information (FR, MULTi, VOSTFR, VO)
-    - Video codec
-    - Resolution (2160p, 1080p, 720p, DVDRip, XviD)
+    Extrait:
+    - Informations de langue (FR, MULTi, VOSTFR, VO)
+    - Codec vidéo
+    - Résolution (2160p, 1080p, 720p, DVDRip, XviD)
 
     Args:
-        video: Video object with complete_path_original set.
+        video: Objet Video avec complete_path_original défini.
 
     Returns:
-        Formatted spec string (e.g., "MULTi x264 1080p").
-        Returns existing spec if already complete or on error.
+        Chaîne de specs formatée (ex: "MULTi x264 1080p").
+        Retourne les specs existantes si déjà complètes ou en cas d'erreur.
     """
-    # If specs exist and seem complete (3+ parts), keep them
+    # Si les specs existent et semblent complètes (3+ parties), les conserver
     if video.spec and len(video.spec.split()) >= 3:
-        logger.debug(f"Existing specs preserved: {video.spec}")
+        logger.debug(f"Specs existantes conservées: {video.spec}")
         return video.spec
 
     try:
         from pymediainfo import MediaInfo
         mi = MediaInfo.parse(video.complete_path_original)
     except Exception as e:
-        logger.warning(f"MediaInfo error for {video.complete_path_original}: {e}")
-        return video.spec  # Return existing specs on error
+        logger.warning(f"Erreur MediaInfo pour {video.complete_path_original}: {e}")
+        return video.spec  # Retourner les specs existantes en cas d'erreur
 
     if not mi.tracks:
         return video.spec
@@ -57,7 +57,7 @@ def extract_media_info(video: "Video") -> str:
     if not nb_audio:
         return video.spec
 
-    # Extract language information
+    # Extraction des informations de langue
     try:
         languages = (
             mi.tracks[0].audio_language_list.lower().split(' / ')
@@ -67,7 +67,7 @@ def extract_media_info(video: "Video") -> str:
     except Exception:
         languages = ['french']
 
-    # Extract subtitle information
+    # Extraction des informations de sous-titres
     try:
         subtitles = (
             mi.tracks[0].text_language_list.lower().split(' / ')
@@ -77,7 +77,7 @@ def extract_media_info(video: "Video") -> str:
     except Exception:
         subtitles = []
 
-    # Extract video track information
+    # Extraction des informations de la piste vidéo
     if len(mi.tracks) > 1:
         width = mi.tracks[1].width or 0
         height = mi.tracks[1].height or 0
@@ -86,13 +86,13 @@ def extract_media_info(video: "Video") -> str:
         width = height = 0
         codec = ''
 
-    # Normalize codec name
+    # Normalisation du nom du codec
     if 'AVC' in codec:
         codec = 'x264'
 
     spec = ''
 
-    # Determine language tag
+    # Détermination du tag de langue
     if int(nb_audio) > 1:
         if _is_french(subtitles):
             if _is_french(languages):
@@ -111,7 +111,7 @@ def extract_media_info(video: "Video") -> str:
 
     spec += codec
 
-    # Determine resolution
+    # Détermination de la résolution
     if width > 3800 or height > 2100:
         spec += ' 2160p'
     elif width > 1900 or height > 1000:
@@ -126,7 +126,6 @@ def extract_media_info(video: "Video") -> str:
     return spec
 
 
-# Backward compatibility alias
 def media_info(video: "Video") -> str:
-    """Backward compatible alias for extract_media_info."""
+    """Alias de compatibilité ascendante pour extract_media_info."""
     return extract_media_info(video)
