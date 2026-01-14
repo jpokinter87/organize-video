@@ -6,9 +6,15 @@ from pathlib import Path
 from typing import Optional, Tuple, TYPE_CHECKING
 
 from loguru import logger
+from rich.console import Console
+
+from organize.filesystem.symlinks import create_symlink
 
 if TYPE_CHECKING:
     from organize.models.video import Video
+
+# Console pour l'affichage interactif
+_console = Console()
 
 
 def move_file(source: Path, destination: Path, dry_run: bool = False) -> bool:
@@ -379,3 +385,71 @@ def cleanup_work_directory(work_dir: Path, console: Optional[object] = None) -> 
             logger.info(f"Total des dossiers Saison imbriqués supprimés: {total_removed}")
     except Exception as e:
         logger.warning(f"Erreur lors du nettoyage du répertoire de travail: {e}")
+
+
+def handle_similar_file(
+    new_file_path: Path,
+    existing_file_path: Path,
+    waiting_folder: Path,
+    storage_dir: Path
+) -> Optional[Path]:
+    """
+    Gère le cas où un fichier similaire est trouvé.
+
+    Présente à l'utilisateur les options pour gérer le doublon potentiel.
+
+    Args:
+        new_file_path: Chemin du nouveau fichier.
+        existing_file_path: Chemin du fichier existant similaire.
+        waiting_folder: Dossier d'attente pour les fichiers en suspens.
+        storage_dir: Répertoire de stockage principal.
+
+    Returns:
+        - existing_file_path si l'ancien fichier est conservé (le nouveau est déplacé)
+        - new_file_path si le nouveau fichier est conservé (l'ancien est déplacé)
+        - None si les deux fichiers sont conservés
+    """
+    _console.print(f"[yellow]⚠️  Un fichier similaire existe déjà :[/yellow]")
+    _console.print(f"   [red]Existant:[/red] {'/'.join(existing_file_path.parts[-3:])}")
+    _console.print(f"   [green]Nouveau:[/green] {new_file_path.name}")
+
+    choice = input("""Que souhaitez-vous faire ?
+    1: Garder l'ancien fichier (déplacer le nouveau vers attente)
+    2: Remplacer par le nouveau (déplacer l'ancien vers attente)
+    3: Conserver les deux
+Votre choix (1/2/3): """).strip()
+
+    match choice:
+        case "1":
+            _console.print(f"[blue]→ Déplacement du nouveau fichier vers l'attente[/blue]")
+            try:
+                # Déplacement vers le NAS puis création du symlink d'attente
+                waiting_nas_file = storage_dir / 'waiting' / new_file_path.name
+                waiting_nas_file.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(new_file_path), str(waiting_nas_file))
+                create_symlink(waiting_nas_file, waiting_folder / new_file_path.name)
+                logger.info(f"Fichier déplacé vers l'attente: {waiting_nas_file}")
+            except Exception as e:
+                logger.error(f"Erreur lors du déplacement: {e}")
+            return existing_file_path
+
+        case "2":
+            _console.print(f"[blue]→ Remplacement de l'ancien fichier[/blue]")
+            try:
+                # Déplacement de l'ancien vers l'attente
+                waiting_nas_file = storage_dir / 'waiting' / existing_file_path.name
+                waiting_nas_file.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(existing_file_path), str(waiting_nas_file))
+                create_symlink(waiting_nas_file, waiting_folder / existing_file_path.name)
+                logger.info(f"Ancien fichier déplacé vers l'attente: {waiting_nas_file}")
+            except Exception as e:
+                logger.error(f"Erreur lors du déplacement de l'ancien fichier: {e}")
+            return new_file_path
+
+        case "3":
+            _console.print("[blue]→ Conservation des deux fichiers[/blue]")
+            return None
+
+        case _:
+            _console.print("[red]Choix non valide. Conservation des deux fichiers par défaut.[/red]")
+            return None

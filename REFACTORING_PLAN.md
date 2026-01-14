@@ -192,12 +192,19 @@ For each phase:
 - `extract_title_from_filename()` → `organize/classification/text_processing.py`
 - `format_undetected_filename()` → `organize/classification/text_processing.py`
 
-### Phases Restantes
+#### Phase 6: Video Processing Pipeline ✅
+- `create_video_list()` → `organize/pipeline/video_list.py`
+- `process_single_video()` → `organize/pipeline/video_list.py`
+- `load_last_exec()` → `organize/pipeline/video_list.py`
+- `get_last_exec_readonly()` → `organize/pipeline/video_list.py`
+- `create_paths()` → `organize/pipeline/processor.py`
+- `process_video()` → `organize/pipeline/processor.py`
+- `handle_similar_file()` → `organize/filesystem/file_ops.py`
+- `select_db()` → `organize/utils/database.py`
+- `add_hash_to_db()` → `organize/utils/database.py`
+- `hash_exists_in_db()` → `organize/utils/database.py`
 
-#### Phase 6: Video Processing Pipeline (En cours)
-Fonctions GAP restantes:
-- `create_video_list()` - Création de la liste avec multiprocessing
-- `process_video()` - Traitement des doublons
+### Phases Restantes
 
 #### Phase 7: Series Handler
 - `add_episodes_titles()` - Titres d'épisodes TVDB
@@ -207,9 +214,9 @@ Fonctions GAP restantes:
 
 ### Statistiques
 
-- **Fonctions migrées**: 18
-- **Fonctions GAP restantes**: 4
-- **Tests unitaires**: 396 passent
+- **Fonctions migrées**: 28
+- **Fonctions GAP restantes**: 2
+- **Tests unitaires**: 417 passent
 - **Modules créés/étendus**:
   - `organize/api/validation.py` (nouveau)
   - `organize/classification/media_info.py` (nouveau)
@@ -217,3 +224,6 @@ Fonctions GAP restantes:
   - `organize/filesystem/file_ops.py` (étendu)
   - `organize/filesystem/paths.py` (étendu)
   - `organize/ui/interactive.py` (nouveau)
+  - `organize/pipeline/video_list.py` (nouveau)
+  - `organize/pipeline/processor.py` (étendu)
+  - `organize/utils/database.py` (nouveau)

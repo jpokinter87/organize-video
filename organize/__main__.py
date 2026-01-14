@@ -45,6 +45,7 @@ from organize.filesystem import (
     cleanup_work_directory,
 )
 from organize.ui import ConsoleUI
+from organize.pipeline import create_video_list, process_video
 
 # ============================================================================
 # GAP FUNCTIONS LOADER (Temporary - from organize.py)
@@ -108,31 +109,12 @@ def _get_gap_function(name: str) -> Callable:
 # MIGRATED: choose_genre_manually -> organize.ui.interactive
 # MIGRATED: user_confirms_match -> organize.ui.interactive
 # MIGRATED: handle_not_found_error -> organize.ui.interactive
+# MIGRATED: create_video_list -> organize.pipeline.video_list
+# MIGRATED: process_video -> organize.pipeline.processor
 
 def set_fr_title_and_category(video: Video) -> Video:
     """[GAP] Set French title and category."""
     return _get_gap_function("set_fr_title_and_category")(video)
-
-
-def create_video_list(
-    search_dir: Path,
-    days_to_manage: float,
-    temp_dir: Path,
-    storage_dir: Path,
-    force_mode: bool,
-    dry_run: bool,
-    use_multiprocessing: bool = True
-) -> list:
-    """[GAP] Create list of videos to process."""
-    return _get_gap_function("create_video_list")(
-        search_dir, days_to_manage, temp_dir, storage_dir,
-        force_mode, dry_run, use_multiprocessing
-    )
-
-
-def process_video(video: Video, waiting_folder: Path, storage_dir: Path, symlinks_dir: Path):
-    """[GAP] Process a single video for duplicates."""
-    return _get_gap_function("process_video")(video, waiting_folder, storage_dir, symlinks_dir)
 
 
 def add_episodes_titles(series_videos: list, work_dir: Path, dry_run: bool) -> None:
