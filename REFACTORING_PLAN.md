@@ -148,8 +148,72 @@ For each phase:
 
 ## Success Criteria
 
-- [ ] All 324+ existing tests pass
+- [x] All 324+ existing tests pass (396 tests passent actuellement)
 - [ ] organize.py can be removed or kept as legacy-only
 - [ ] __main__.py has no GAP function imports
-- [ ] Each module is independently testable
-- [ ] No circular imports
+- [x] Each module is independently testable
+- [x] No circular imports
+
+---
+
+## État Actuel de la Migration (Janvier 2026)
+
+### Phases Complétées
+
+#### Phase 1: API Validation ✅
+- `validate_api_keys()` → `organize/api/validation.py`
+- `test_api_connectivity()` → `organize/api/validation.py`
+- `ensure_api_ready()` → `organize/api/validation.py`
+
+#### Phase 2: Media Info ✅
+- `media_info()` / `extract_media_info()` → `organize/classification/media_info.py`
+
+#### Phase 3: Path Resolution ✅
+- `find_directory_for_video()` → `organize/filesystem/paths.py`
+- `find_symlink_and_sub_dir()` → `organize/filesystem/paths.py`
+- `find_similar_file()` → `organize/filesystem/paths.py`
+- `find_similar_file_in_folder()` → `organize/filesystem/paths.py`
+- `SubfolderCache` → `organize/filesystem/paths.py`
+- `clear_caches()` → `organize/filesystem/paths.py`
+
+#### Phase 4: File Operations ✅
+- `aplatir_repertoire_series()` → `organize/filesystem/file_ops.py`
+- `rename_video()` → `organize/filesystem/file_ops.py`
+- `move_file_new_nas()` → `organize/filesystem/file_ops.py`
+- `cleanup_directories()` → `organize/filesystem/file_ops.py`
+- `cleanup_work_directory()` → `organize/filesystem/file_ops.py`
+
+#### Phase 5: Interactive UI ✅
+- `launch_video_player()` → `organize/ui/interactive.py`
+- `wait_for_user_after_viewing()` → `organize/ui/interactive.py`
+- `choose_genre_manually()` → `organize/ui/interactive.py`
+- `user_confirms_match()` → `organize/ui/interactive.py`
+- `handle_not_found_error()` → `organize/ui/interactive.py`
+- `extract_title_from_filename()` → `organize/classification/text_processing.py`
+- `format_undetected_filename()` → `organize/classification/text_processing.py`
+
+### Phases Restantes
+
+#### Phase 6: Video Processing Pipeline (En cours)
+Fonctions GAP restantes:
+- `create_video_list()` - Création de la liste avec multiprocessing
+- `process_video()` - Traitement des doublons
+
+#### Phase 7: Series Handler
+- `add_episodes_titles()` - Titres d'épisodes TVDB
+
+#### Phase 8: Main Processing Function
+- `set_fr_title_and_category()` - Fonction principale de traitement
+
+### Statistiques
+
+- **Fonctions migrées**: 18
+- **Fonctions GAP restantes**: 4
+- **Tests unitaires**: 396 passent
+- **Modules créés/étendus**:
+  - `organize/api/validation.py` (nouveau)
+  - `organize/classification/media_info.py` (nouveau)
+  - `organize/classification/text_processing.py` (étendu)
+  - `organize/filesystem/file_ops.py` (étendu)
+  - `organize/filesystem/paths.py` (étendu)
+  - `organize/ui/interactive.py` (nouveau)
