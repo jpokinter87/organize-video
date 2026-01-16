@@ -1,5 +1,6 @@
 """Fonctions interactives pour la saisie utilisateur et la visualisation."""
 
+import os
 import shutil
 import subprocess
 import sys
@@ -59,7 +60,8 @@ def launch_video_player(video_path: Path) -> bool:
         console.print(f"[blue]Lancement de {player} pour visualiser le fichier...[/blue]")
 
         if sys.platform.startswith('win') and player == 'start':
-            subprocess.Popen(['start', str(video_path)], shell=True)
+            # Utiliser os.startfile() au lieu de shell=True pour éviter l'injection shell
+            os.startfile(str(video_path))
         elif sys.platform == 'darwin' and player == 'open':
             subprocess.Popen(['open', str(video_path)])
         else:

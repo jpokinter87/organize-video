@@ -1,5 +1,6 @@
 """Module de création et gestion de la liste des vidéos à traiter."""
 
+import fcntl
 import multiprocessing
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -29,21 +30,44 @@ def load_last_exec() -> float:
     Si le fichier n'existe pas ou est invalide, utilise 3 jours en arrière.
     Sauvegarde la date actuelle pour la prochaine exécution.
 
+    Utilise un verrouillage de fichier pour éviter les conditions de concurrence
+    lorsque plusieurs instances du script s'exécutent simultanément.
+
     Returns:
         Timestamp de la dernière exécution.
     """
-    try:
-        with open("last_exec_video", "r") as last_exec_file:
-            last_exec = float(last_exec_file.read().strip())
-    except (FileNotFoundError, ValueError):
-        last_exec = time.time() - 259200  # 3 jours avant
+    last_exec_file_path = Path("last_exec_video")
+    lock_file_path = Path("last_exec_video.lock")
 
-    # Sauvegarde la date actuelle
+    # Valeur par défaut : 3 jours avant
+    last_exec = time.time() - 259200
+
     try:
-        with open("last_exec_video", "w") as last_exec_file:
-            last_exec_file.write(str(time.time()))
-    except IOError as e:
-        logger.warning(f"Impossible de sauvegarder la date d'exécution : {e}")
+        # Créer le fichier de verrouillage si nécessaire
+        lock_file_path.touch(exist_ok=True)
+
+        with open(lock_file_path, "r+") as lock_file:
+            # Acquérir un verrou exclusif
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+
+            try:
+                # Lire la dernière exécution
+                if last_exec_file_path.exists():
+                    content = last_exec_file_path.read_text().strip()
+                    if content:
+                        last_exec = float(content)
+
+                # Écriture atomique : écrire dans un fichier temporaire puis renommer
+                temp_file = Path("last_exec_video.tmp")
+                temp_file.write_text(str(time.time()))
+                temp_file.replace(last_exec_file_path)
+
+            finally:
+                # Libérer le verrou
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+    except (IOError, OSError, ValueError) as e:
+        logger.warning(f"Erreur lors de la gestion de la date d'exécution : {e}")
 
     return last_exec
 
@@ -57,10 +81,11 @@ def get_last_exec_readonly() -> float:
     Returns:
         Timestamp de la dernière exécution.
     """
+    last_exec_file_path = Path("last_exec_video")
     try:
-        with open("last_exec_video", "r") as last_exec_file:
-            return float(last_exec_file.read().strip())
-    except (FileNotFoundError, ValueError):
+        content = last_exec_file_path.read_text().strip()
+        return float(content) if content else time.time() - 259200
+    except (FileNotFoundError, ValueError, OSError):
         return time.time() - 259200  # 3 jours avant
 
 

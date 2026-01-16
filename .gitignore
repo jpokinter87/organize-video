@@ -49,6 +49,8 @@ Thumbs.db
 
 # Project specific
 last_exec_video
+last_exec_video.lock
+last_exec_video.tmp
 web/db.sqlite3
 web/*.sqlite3
 
