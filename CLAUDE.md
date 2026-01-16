@@ -4,22 +4,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Python video organization tool with two operating modes:
-- **Console (CLI)**: Command-line interface for batch processing
-- **Web UI**: Django web interface for interactive management
+This repository contains **two separate applications**:
 
-The tool organizes video files (movies and TV series) by:
+1. **CLI Application** (`organize/` package) - **FUNCTIONAL**
+   - Command-line tool for batch video organization
+   - Located in: `organize/` directory
+   - Entry point: `organize-video` command or `python -m organize`
+
+2. **Web Application** (`web/` directory) - **IN DEVELOPMENT**
+   - Django web interface (not yet functional)
+   - Located in: `web/` directory
+   - See `web/README.md` for details
+
+**These applications share no code and are completely independent.**
+
+---
+
+## CLI Application (organize/)
+
+### Purpose
+
+Organizes video files (movies and TV series) by:
 - Detecting video metadata using TMDB and TVDB APIs
 - Extracting technical specs (codec, resolution, language) via MediaInfo and guessit
 - Renaming files with French titles and standardized format
 - Creating organized symlink structures by genre/alphabetical order
 - Managing duplicates via MD5 hash tracking in SQLite databases
 
-## Operating Modes
-
-### Mode 1: Console (CLI)
-
-The primary way to run batch processing via command line.
+### Usage
 
 ```bash
 # Modern modular mode (default - uses organize/ package)
@@ -50,32 +62,10 @@ organize-video --legacy
 python -m organize
 ```
 
-### Mode 2: Web UI (Django)
-
-Interactive web interface for visual management.
-
-```bash
-cd web
-python manage.py migrate          # First time setup
-python manage.py init_settings    # Initialize configuration
-python manage.py runserver 0.0.0.0:8000
-```
-
-Access at `http://localhost:8000`
-
-**Web UI Features:**
-- `/` - Dashboard with summary statistics
-- `/processing/` - Create and manage processing jobs
-- `/processing/confirmations/` - Resolve pending confirmations via modal UI
-- `/library/` - Browse organized videos with filters
-- `/dashboard/` - Statistics, logs, storage info
-- `/settings/` - Configure directories, API keys, processing options
-
 ### Dependencies
 
 The project uses `uv` for dependency management. Key dependencies:
 
-**Core:**
 - `requests`, `tvdb_api` - API clients for TMDB/TVDB
 - `guessit` - Filename parsing for video metadata
 - `pymediainfo` - Technical video specs extraction
@@ -84,37 +74,24 @@ The project uses `uv` for dependency management. Key dependencies:
 - `loguru` - Logging
 - `python-dotenv` - Environment variable management
 
-**Web UI:**
-- `django` - Web framework
-- `htmx` - Dynamic interactions without full page reload
-- `huey` - Background task queue
-
-## Architecture
-
-### Project Structure
+### Architecture
 
 ```
-organize/
-├── organize.py              # Legacy monolithic script (~3400 lines)
-├── organize/                # Modular package (recommended)
-│   ├── __main__.py          # CLI entry point
-│   ├── config/              # CLI arguments, settings, execution context
-│   ├── models/              # Video dataclass
-│   ├── api/                 # TmdbClient, TvdbClient, CacheDB, validation
-│   ├── classification/      # text_processing, type_detector, genre_classifier, media_info
-│   ├── filesystem/          # discovery, symlinks, file_ops, paths
-│   ├── ui/                  # console, display, confirmations, interactive
-│   ├── pipeline/            # processor, series_handler, video_list, main_processor
-│   └── utils/               # hash, database
-└── web/                     # Django web interface
-    ├── videomanager/        # Django project settings
-    ├── core/                # Models, services, tasks
-    ├── processing/          # Job management views
-    ├── library/             # Video browsing views
-    └── dashboard/           # Statistics and logs views
+organize/                    # CLI Package
+├── __main__.py              # CLI entry point
+├── config/                  # CLI arguments, settings, execution context
+├── models/                  # Video dataclass
+├── api/                     # TmdbClient, TvdbClient, CacheDB, validation
+├── classification/          # text_processing, type_detector, genre_classifier, media_info
+├── filesystem/              # discovery, symlinks, file_ops, paths
+├── ui/                      # console, display, confirmations, interactive
+├── pipeline/                # processor, series_handler, video_list, main_processor
+└── utils/                   # hash, database
+
+organize.py                  # Legacy monolithic script (~3400 lines) - DEPRECATED
 ```
 
-### Key Modules (organize/ package)
+### Key Modules
 
 | Module | Purpose |
 |--------|---------|
@@ -127,32 +104,32 @@ organize/
 
 ### Processing Pipeline
 
-1. Parse arguments → Validate API keys → Test connectivity
+1. Parse arguments -> Validate API keys -> Test connectivity
 2. Setup working directories (temp_dir, work_dir, original_dir)
 3. Create video list with hash verification
-4. For each video: extract info → query APIs → format filename → create symlinks
-5. Add episode titles for series → Final copy and verification
+4. For each video: extract info -> query APIs -> format filename -> create symlinks
+5. Add episode titles for series -> Final copy and verification
 
 ### Directory Structure
 
 ```
 /media/NAS64/temp/           # DEFAULT_SEARCH_DIR - Source videos
-  ├── Séries/
+  ├── Series/
   ├── Films/
   ├── Animation/
   └── Docs/
 
 /media/NAS64/                # DEFAULT_STORAGE_DIR - Final storage
 /media/Serveur/test/         # DEFAULT_SYMLINKS_DIR - Symlink structure
-/media/Serveur/LAF/liens_à_faire/  # DEFAULT_TEMP_SYMLINKS_DIR
+/media/Serveur/LAF/liens_a_faire/  # DEFAULT_TEMP_SYMLINKS_DIR
 ```
 
 ### Database Files
 
 - `cache.db` - SQLite cache for TMDB/TVDB API responses
-- `symlink_video_Films.db`, `symlink_video_Séries.db` - Hash tracking per category
+- `symlink_video_Films.db`, `symlink_video_Series.db` - Hash tracking per category
 
-## Configuration
+### Configuration
 
 API keys must be in `.env` file at project root:
 ```
@@ -160,14 +137,14 @@ TMDB_API_KEY=your_key
 TVDB_API_KEY=your_key
 ```
 
-## Important Constants
+### Important Constants
 
-- `CATEGORIES` - Valid source directories: `{'Séries', 'Films', 'Animation', 'Docs#1', 'Docs'}`
+- `CATEGORIES` - Valid source directories: `{'Series', 'Films', 'Animation', 'Docs#1', 'Docs'}`
 - `EXT_VIDEO` - Supported video extensions
 - `GENRES` - TMDB genre ID to French genre name mapping
 - `PRIORITY_GENRES` - Genres that take precedence in classification
 
-## Interactive Behavior (CLI Mode)
+### Interactive Behavior
 
 The script prompts for user confirmation when:
 - API returns multiple matches or uncertain results
@@ -177,10 +154,10 @@ The script prompts for user confirmation when:
 
 Options typically include: accept, manual entry, view file, skip, retry
 
-## Testing
+### Testing
 
 ```bash
-# Run all tests (417 tests)
+# Run all tests
 pytest
 
 # With coverage
@@ -189,3 +166,13 @@ pytest --cov=organize
 # Specific test file
 pytest tests/unit/test_video_list.py
 ```
+
+---
+
+## Web Application (web/) - IN DEVELOPMENT
+
+The web interface is a **separate project** located in the `web/` directory.
+
+**Status:** Not yet functional. Development in progress.
+
+See `web/README.md` for documentation.

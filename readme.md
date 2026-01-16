@@ -1,6 +1,6 @@
-# Video Organizer
+# Video Organizer (CLI)
 
-Outil d'organisation automatisee de videotheque avec detection de metadonnees via les APIs TMDB et TVDB.
+Outil en ligne de commande pour l'organisation automatisee de videotheque avec detection de metadonnees via les APIs TMDB et TVDB.
 
 ## Fonctionnalites
 
@@ -11,18 +11,36 @@ Outil d'organisation automatisee de videotheque avec detection de metadonnees vi
 - Gestion des doublons via suivi MD5 en base SQLite
 - Support des films, series TV, animation et documentaires
 
-## Modes de Fonctionnement
+## Installation
 
-L'application propose **deux modes de fonctionnement** adaptes a differents usages :
+### Prerequis
 
-### Mode Console (CLI)
+- Python 3.13+
+- MediaInfo installe sur le systeme
+- Cles API TMDB et TVDB
 
-Le mode console est ideal pour :
-- Traitement automatise en lot
-- Integration dans des scripts ou cron jobs
-- Utilisateurs avances preferant la ligne de commande
+### Installation avec uv (recommande)
 
-#### Demarrage
+```bash
+uv sync
+```
+
+### Installation avec pip
+
+```bash
+pip install -e .
+```
+
+## Configuration
+
+Creer un fichier `.env` a la racine du projet :
+
+```env
+TMDB_API_KEY=votre_cle_tmdb
+TVDB_API_KEY=votre_cle_tvdb
+```
+
+## Utilisation
 
 ```bash
 # Mode standard (traitement des fichiers recents)
@@ -53,7 +71,7 @@ organize-video --legacy
 python -m organize
 ```
 
-#### Options disponibles
+### Options disponibles
 
 | Option | Description |
 |--------|-------------|
@@ -69,100 +87,15 @@ python -m organize
 | `--tag` | Filtrer par motif de nom de fichier |
 | `--legacy` | Utiliser le mode legacy (organize.py) |
 
-#### Comportement interactif
+### Comportement interactif
 
-En mode console, le script demande confirmation pour :
+Le script demande confirmation pour :
 - Correspondances API incertaines ou multiples
 - Fichiers non detectes automatiquement
 - Fichiers similaires (doublons potentiels)
 - Series non identifiees
 
-### Mode Interface Web (UI)
-
-Le mode web est ideal pour :
-- Gestion visuelle de la videotheque
-- Traitement interactif avec confirmation par clic
-- Consultation des statistiques et logs
-- Utilisateurs preferant une interface graphique
-
-#### Demarrage
-
-```bash
-cd web
-python manage.py migrate  # Premiere utilisation uniquement
-python manage.py init_settings  # Initialiser les parametres
-python manage.py runserver 0.0.0.0:8000
-```
-
-Acceder a l'interface via `http://localhost:8000`
-
-#### Fonctionnalites de l'interface web
-
-**Tableau de bord** (`/`)
-- Resume des videos traitees
-- Confirmations en attente
-- Jobs de traitement actifs
-- Videos recentes
-
-**Traitement** (`/processing/`)
-- Creation de jobs de scan
-- Suivi du progres en temps reel
-- Gestion des confirmations avec interface modale
-- Annulation et redemarrage des jobs
-
-**Bibliotheque** (`/library/`)
-- Navigation par categorie (films, series, animation, docs)
-- Filtrage par genre, annee, recherche textuelle
-- Affichage en grille avec posters
-- Details des videos
-
-**Statistiques** (`/dashboard/`)
-- Statistiques par categorie et genre
-- Activite recente
-- Logs de traitement filtrable
-- Informations de stockage
-
-**Configuration** (`/settings/`)
-- Gestion des repertoires
-- Configuration des cles API
-- Parametres de traitement
-- Gestion de la base de hash
-
-#### Technologies
-
-- Django 4.x comme framework web
-- HTMX pour les interactions dynamiques sans rechargement
-- Huey pour les taches asynchrones en arriere-plan
-- Interface responsive avec composants modulaires
-
-## Configuration
-
-### Prerequis
-
-- Python 3.10+
-- MediaInfo installe sur le systeme
-- Cles API TMDB et TVDB
-
-### Installation des dependances
-
-```bash
-# Avec uv (recommande)
-uv sync
-
-# Ou avec pip
-pip install -r requirements.txt
-```
-
-### Variables d'environnement
-
-Creer un fichier `.env` a la racine du projet :
-
-```env
-TMDB_API_KEY=votre_cle_tmdb
-TVDB_API_KEY=votre_cle_tvdb
-```
-
-### Structure des repertoires
+## Structure des repertoires
 
 ```
 /media/NAS64/temp/           # Repertoire source (DEFAULT_SEARCH_DIR)
@@ -178,12 +111,9 @@ TVDB_API_KEY=votre_cle_tvdb
 
 ## Architecture
 
-### Structure du projet
-
 ```
-organize/
-├── organize.py              # Application legacy monolithique
-├── organize/                # Package modulaire
+organize-video/
+├── organize/                # Package principal
 │   ├── __main__.py          # Point d'entree CLI
 │   ├── config/              # Configuration et arguments
 │   ├── models/              # Dataclass Video
@@ -193,12 +123,9 @@ organize/
 │   ├── ui/                  # Interface console et interactions
 │   ├── pipeline/            # Traitement video principal
 │   └── utils/               # Utilitaires (hash, database)
-└── web/                     # Interface web Django
-    ├── videomanager/        # Configuration Django
-    ├── core/                # Modeles et services principaux
-    ├── processing/          # Gestion des jobs de traitement
-    ├── library/             # Navigation de la bibliotheque
-    └── dashboard/           # Statistiques et logs
+├── organize.py              # Script legacy (deprecated)
+├── tests/                   # Tests unitaires
+└── web/                     # Interface web (projet separe)
 ```
 
 ### Bases de donnees
@@ -220,14 +147,13 @@ pytest --cov=organize
 pytest tests/unit/test_video_list.py
 ```
 
-## Contribution
+## Interface Web (projet separe)
 
-Les contributions sont bienvenues. Merci de :
-1. Forker le projet
-2. Creer une branche pour votre fonctionnalite
-3. Ecrire des tests pour les nouvelles fonctionnalites
-4. Soumettre une pull request
+Une interface web Django est en cours de developpement dans le repertoire `web/`.
+**Cette interface n'est pas encore fonctionnelle.**
+
+Pour plus d'informations, voir [web/README.md](web/README.md).
 
 ## Licence
 
-Ce projet est sous licence MIT.
+MIT

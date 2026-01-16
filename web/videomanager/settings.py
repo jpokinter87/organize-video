@@ -5,7 +5,6 @@ Video library organization web interface with TMDB/TVDB integration.
 """
 
 import os
-import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -16,8 +15,8 @@ PROJECT_ROOT = BASE_DIR.parent
 # Load environment variables from parent .env file
 load_dotenv(PROJECT_ROOT / '.env')
 
-# Add organize package to Python path
-sys.path.insert(0, str(PROJECT_ROOT))
+# NOTE: Cette application web est independante de l'application CLI.
+# Aucun import depuis le package 'organize/' n'est necessaire.
 
 # Quick-start development settings - unsuitable for production
 # SECURITY WARNING: keep the secret key used in production secret!

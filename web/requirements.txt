@@ -1,0 +1,29 @@
+# Video Organizer Web - Dependencies
+# Application web Django pour l'organisation de videotheque
+
+# Framework web
+django>=5.0,<6.0
+
+# Extensions Django
+django-htmx>=1.17.0
+whitenoise>=6.6.0
+
+# Taches asynchrones
+huey>=2.5.0
+
+# Traitement d'images (posters)
+pillow>=10.0.0
+
+# API clients
+requests>=2.32.5
+
+# Variables d'environnement
+python-dotenv>=1.2.1
+
+# Extraction metadonnees video
+guessit>=3.8.0
+pymediainfo>=7.0.1
+babelfish>=0.6.1
+
+# TVDB API
+tvdb-api>=3.1.0
