@@ -313,3 +313,19 @@ ANIMATION_SUBCATEGORIES: Dict[str, str] = {
 
 # Combinaisons de genres spéciales
 COMEDY_DRAMA_GENRE: str = 'Comédie dramatique'
+
+# =============================================================================
+# GESTION DE L'ÉTAT DE L'APPLICATION
+# =============================================================================
+
+# Nombre de jours par défaut pour la recherche de fichiers récents
+DEFAULT_DAYS_BACK: int = 3
+
+# Secondes correspondant à DEFAULT_DAYS_BACK (3 jours = 259200 secondes)
+DEFAULT_SECONDS_BACK: int = DEFAULT_DAYS_BACK * 86400
+
+# Nom de la table pour l'état de l'application
+APP_STATE_TABLE: str = 'app_state'
+
+# Clé pour la dernière exécution
+LAST_EXEC_KEY: str = 'last_exec'

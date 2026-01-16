@@ -71,6 +71,11 @@ from organize.config.settings import (
     VIDEO_PLAYERS,
     # Animation
     ANIMATION_SUBCATEGORIES,
+    # État de l'application
+    DEFAULT_DAYS_BACK,
+    DEFAULT_SECONDS_BACK,
+    APP_STATE_TABLE,
+    LAST_EXEC_KEY,
 )
 from organize.config.context import (
     ExecutionContext,
@@ -161,6 +166,11 @@ __all__ = [
     "VIDEO_PLAYERS",
     # Animation
     "ANIMATION_SUBCATEGORIES",
+    # État de l'application
+    "DEFAULT_DAYS_BACK",
+    "DEFAULT_SECONDS_BACK",
+    "APP_STATE_TABLE",
+    "LAST_EXEC_KEY",
     # Contexte d'exécution
     "ExecutionContext",
     "get_context",

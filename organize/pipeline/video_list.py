@@ -1,6 +1,5 @@
 """Module de création et gestion de la liste des vidéos à traiter."""
 
-import fcntl
 import multiprocessing
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -14,79 +13,16 @@ from tqdm import tqdm
 from organize.models.video import Video
 from organize.utils.hash import checksum_md5
 from organize.utils.database import select_db, hash_exists_in_db, add_hash_to_db
+from organize.utils.app_state import (
+    load_last_exec,
+    get_last_exec_readonly,
+)
 from organize.classification.type_detector import type_of_video, extract_file_infos
 from organize.filesystem.discovery import get_files
 from organize.pipeline.processor import create_paths
 
 # Console pour l'affichage
 console = Console()
-
-
-def load_last_exec() -> float:
-    """
-    Charge la date de dernière exécution et met à jour le fichier.
-
-    Lit la date de dernière exécution depuis le fichier last_exec_video.
-    Si le fichier n'existe pas ou est invalide, utilise 3 jours en arrière.
-    Sauvegarde la date actuelle pour la prochaine exécution.
-
-    Utilise un verrouillage de fichier pour éviter les conditions de concurrence
-    lorsque plusieurs instances du script s'exécutent simultanément.
-
-    Returns:
-        Timestamp de la dernière exécution.
-    """
-    last_exec_file_path = Path("last_exec_video")
-    lock_file_path = Path("last_exec_video.lock")
-
-    # Valeur par défaut : 3 jours avant
-    last_exec = time.time() - 259200
-
-    try:
-        # Créer le fichier de verrouillage si nécessaire
-        lock_file_path.touch(exist_ok=True)
-
-        with open(lock_file_path, "r+") as lock_file:
-            # Acquérir un verrou exclusif
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-
-            try:
-                # Lire la dernière exécution
-                if last_exec_file_path.exists():
-                    content = last_exec_file_path.read_text().strip()
-                    if content:
-                        last_exec = float(content)
-
-                # Écriture atomique : écrire dans un fichier temporaire puis renommer
-                temp_file = Path("last_exec_video.tmp")
-                temp_file.write_text(str(time.time()))
-                temp_file.replace(last_exec_file_path)
-
-            finally:
-                # Libérer le verrou
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-
-    except (IOError, OSError, ValueError) as e:
-        logger.warning(f"Erreur lors de la gestion de la date d'exécution : {e}")
-
-    return last_exec
-
-
-def get_last_exec_readonly() -> float:
-    """
-    Lit la date de dernière exécution sans la modifier.
-
-    Utilisé en mode simulation pour ne pas modifier le fichier last_exec_video.
-
-    Returns:
-        Timestamp de la dernière exécution.
-    """
-    last_exec_file_path = Path("last_exec_video")
-    try:
-        content = last_exec_file_path.read_text().strip()
-        return float(content) if content else time.time() - 259200
-    except (FileNotFoundError, ValueError, OSError):
-        return time.time() - 259200  # 3 jours avant
 
 
 def process_single_video(args: Tuple[Path, Path, Path, bool, bool]) -> Optional[Video]:
