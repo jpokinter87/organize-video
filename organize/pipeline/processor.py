@@ -165,3 +165,108 @@ def process_single_video_file(
     except Exception as e:
         logger.error(f"Error processing {file_path}: {e}")
         return VideoProcessingResult(success=False, error=str(e))
+
+
+def create_paths(
+    file: Path,
+    video: Video,
+    temp_dir: Path,
+    dry_run: bool = False
+) -> None:
+    """
+    Crée les chemins et liens symboliques temporaires.
+
+    Crée la structure de répertoires temporaires et les liens symboliques
+    pour le traitement des vidéos. En mode simulation, les opérations
+    sont uniquement loggées sans créer de fichiers.
+
+    Args:
+        file: Chemin du fichier vidéo source.
+        video: Objet Video contenant les métadonnées.
+        temp_dir: Répertoire temporaire de base.
+        dry_run: Si True, simule uniquement les opérations.
+    """
+    from organize.filesystem.symlinks import create_symlink
+
+    def reps_pattern(filename: Path, pattern: str) -> tuple:
+        """Extrait les chemins avant et après le pattern."""
+        reps = filename.parts
+        if 'Animation' in filename.parts:
+            index = reps.index('Animation')
+            pattern = '/'.join(reps[index - 1:index + 1])
+        filename_str = str(filename)
+        pattern = f'/{pattern}/'
+        if pattern in filename_str:
+            before, after = filename_str.split(pattern, 1)
+            return Path(before), Path(after)
+        else:
+            logger.warning(f'Pattern {pattern} non trouvé dans {filename_str}')
+            return Path(''), Path('')
+
+    # Déterminer le chemin temporaire selon le type de vidéo
+    if video.is_film():
+        temp_path = temp_dir / video.type_file
+    elif video.is_animation():
+        temp_path = temp_dir / 'Films' / video.type_file
+    else:
+        b_rep, s_rep = reps_pattern(video.complete_path_original, video.type_file)
+        temp_path = temp_dir / video.type_file / s_rep.parent
+
+    if dry_run:
+        logger.debug(f'SIMULATION - Création du répertoire: {temp_path}')
+        name = video.complete_path_original.name
+        video.destination_file = temp_path / name
+        logger.debug(f'SIMULATION - Nouveau lien: {file} -> {video.destination_file}')
+        return
+
+    temp_path.mkdir(parents=True, exist_ok=True)
+
+    name = video.complete_path_original.name
+    video.destination_file = temp_path / name
+    create_symlink(file, video.destination_file)
+    logger.debug(f'Nouveau lien créé: {video.destination_file}')
+
+
+def process_video(
+    video: Video,
+    waiting_folder: Path,
+    storage_dir: Path,
+    symlinks_dir: Path,
+    similarity_threshold: int = 80,
+    year_tolerance: int = 1
+) -> Optional[Video]:
+    """
+    Traite une vidéo en vérifiant l'existence de fichiers similaires.
+
+    Pour les films et animations, recherche des fichiers similaires et
+    propose à l'utilisateur de gérer les doublons potentiels.
+
+    Args:
+        video: Objet Video à traiter.
+        waiting_folder: Dossier d'attente pour les fichiers en suspens.
+        storage_dir: Répertoire de stockage principal.
+        symlinks_dir: Répertoire des liens symboliques.
+        similarity_threshold: Seuil de similarité pour la détection (0-100).
+        year_tolerance: Tolérance en années pour la correspondance.
+
+    Returns:
+        L'objet Video traité, ou None si le fichier a été ignoré.
+    """
+    from organize.filesystem.paths import find_similar_file
+    from organize.filesystem.file_ops import handle_similar_file
+
+    if video.is_film_anim():
+        similar_file = find_similar_file(video, storage_dir, similarity_threshold, year_tolerance)
+        if similar_file:
+            result = handle_similar_file(
+                video.complete_path_original,
+                similar_file,
+                waiting_folder,
+                storage_dir
+            )
+            if result == similar_file:
+                return None  # On garde l'ancien fichier
+            elif result:
+                video.complete_path_original = result
+
+    return video

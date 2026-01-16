@@ -1207,7 +1207,7 @@ def query_movie_database(name: str, date: int, no_date: bool,
             temp_name = get_movie_name(movie, type_video)
             temp_list_genre = get_unique_genres(movie)
 
-            user_response = user_confirms_match(complete_name, temp_name, found_date, temp_list_genre, video_file_path)
+            user_response = user_confirms_match(complete_name, temp_name, found_date, temp_list_genre, type_video, video_file_path)
 
             if user_response is True:
                 return temp_name, temp_list_genre, found_date
@@ -1219,7 +1219,7 @@ def query_movie_database(name: str, date: int, no_date: bool,
     return handle_error(complete_name, date, no_date, type_video, occurence)
 
 def user_confirms_match(complete_name_: str, tmp_name: str, found_date_: int, tmp_list_genre: List[str],
-                        video_file_path: Path = None) -> Union[bool, str]:
+                        type_video: str, video_file_path: Path = None) -> Union[bool, str]:
     """
     Version classique avec input() - Plus fiable et permet Alt+Tab.
     """
@@ -1235,7 +1235,15 @@ def user_confirms_match(complete_name_: str, tmp_name: str, found_date_: int, tm
 
     # Correspondance trouvée
     genres_str = ", ".join(tmp_list_genre) if tmp_list_genre else "Aucun genre"
+
+    # Détermination du type de contenu pour l'affichage
+    if type_video in FILMANIM:
+        type_label = "🎬 Film" if type_video == "Films" else "🎨 Film d'animation"
+    else:
+        type_label = "📺 Série"
+
     console.print(Panel(
+        f"[cyan]📋 Type :[/cyan] [bold]{type_label}[/bold]\n"
         f"[green]🎬 Titre :[/green] [bold]{tmp_name}[/bold]\n"
         f"[blue]📅 Année :[/blue] [bold]{found_date_ if found_date_ else 'N/A'}[/bold]\n"
         f"[purple]🎭 Genres :[/purple] [italic]{genres_str}[/italic]",

@@ -1,4 +1,4 @@
-"""User interface components."""
+"""Composants d'interface utilisateur."""
 
 from organize.ui.console import ConsoleUI, console
 from organize.ui.display import (
@@ -17,6 +17,13 @@ from organize.ui.confirmations import (
     display_match_confirmation,
     display_genre_selection,
 )
+from organize.ui.interactive import (
+    launch_video_player,
+    wait_for_user_after_viewing,
+    choose_genre_manually,
+    user_confirms_match,
+    handle_not_found_error,
+)
 
 __all__ = [
     "ConsoleUI",
@@ -33,4 +40,9 @@ __all__ = [
     "validate_genre_selection",
     "display_match_confirmation",
     "display_genre_selection",
+    "launch_video_player",
+    "wait_for_user_after_viewing",
+    "choose_genre_manually",
+    "user_confirms_match",
+    "handle_not_found_error",
 ]

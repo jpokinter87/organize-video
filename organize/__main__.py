@@ -4,18 +4,17 @@ This module provides the command-line entry point for the video organization too
 Run with: python -m organize
 
 Supports:
-- Modern modular mode (default): Uses refactored modules with gap imports
+- Modern modular mode (default): Uses fully modular components
 - Legacy mode (--legacy flag): Delegates entirely to organize.py
 """
 
 import sys
 from pathlib import Path
-from typing import Optional, Any, Callable
 
 from loguru import logger
 
 # ============================================================================
-# MODULAR IMPORTS (Available Components)
+# MODULAR IMPORTS (All Components)
 # ============================================================================
 from organize.config import (
     CLIArgs,
@@ -27,143 +26,30 @@ from organize.config import (
 )
 from organize.config.context import execution_context
 from organize.models import Video
-from organize.api import CacheDB
+from organize.api import CacheDB, validate_api_keys, test_api_connectivity
+from organize.classification import media_info, format_undetected_filename
 from organize.filesystem import (
     get_available_categories,
     count_videos,
     copy_tree,
     verify_symlinks,
     setup_working_directories,
+    find_directory_for_video,
+    find_symlink_and_sub_dir,
+    find_similar_file,
+    aplatir_repertoire_series,
+    rename_video,
+    move_file_new_nas,
+    cleanup_directories,
+    cleanup_work_directory,
 )
 from organize.ui import ConsoleUI
-
-# ============================================================================
-# GAP FUNCTIONS LOADER (Temporary - from organize.py)
-# ============================================================================
-# These will be removed progressively as modules are completed
-_organize_module = None  # Lazy-loaded module reference
-
-
-def _load_organize_module():
-    """Lazy-load organize.py module for gap functions."""
-    global _organize_module
-    if _organize_module is None:
-        import importlib.util
-        organize_py = Path(__file__).parent.parent / "organize.py"
-        if not organize_py.exists():
-            raise FileNotFoundError(f"organize.py not found at {organize_py}")
-
-        # Add parent directory to path for imports
-        parent_dir = str(organize_py.parent)
-        if parent_dir not in sys.path:
-            sys.path.insert(0, parent_dir)
-
-        spec = importlib.util.spec_from_file_location("organize_original", organize_py)
-        _organize_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(_organize_module)
-    return _organize_module
-
-
-def _get_gap_function(name: str) -> Callable:
-    """Get a gap function from organize.py."""
-    module = _load_organize_module()
-    func = getattr(module, name, None)
-    if func is None:
-        raise AttributeError(f"Function '{name}' not found in organize.py")
-    return func
-
-
-# ============================================================================
-# GAP FUNCTION WRAPPERS
-# These are temporary and will be replaced by modular implementations
-# Each wrapper is marked with [GAP] to identify migration targets
-# ============================================================================
-
-def validate_api_keys() -> bool:
-    """[GAP] Validate API keys presence."""
-    return _get_gap_function("validate_api_keys")()
-
-
-def test_api_connectivity() -> bool:
-    """[GAP] Test API connectivity."""
-    return _get_gap_function("test_api_connectivity")()
-
-
-def media_info(video: Video) -> str:
-    """[GAP] Extract technical specs via MediaInfo."""
-    return _get_gap_function("media_info")(video)
-
-
-def set_fr_title_and_category(video: Video) -> Video:
-    """[GAP] Set French title and category."""
-    return _get_gap_function("set_fr_title_and_category")(video)
-
-
-def aplatir_repertoire_series(repertoire: Path) -> None:
-    """[GAP] Flatten series directory structure."""
-    return _get_gap_function("aplatir_repertoire_series")(repertoire)
-
-
-def create_video_list(
-    search_dir: Path,
-    days_to_manage: float,
-    temp_dir: Path,
-    storage_dir: Path,
-    force_mode: bool,
-    dry_run: bool,
-    use_multiprocessing: bool = True
-) -> list:
-    """[GAP] Create list of videos to process."""
-    return _get_gap_function("create_video_list")(
-        search_dir, days_to_manage, temp_dir, storage_dir,
-        force_mode, dry_run, use_multiprocessing
-    )
-
-
-def process_video(video: Video, waiting_folder: Path, storage_dir: Path, symlinks_dir: Path):
-    """[GAP] Process a single video for duplicates."""
-    return _get_gap_function("process_video")(video, waiting_folder, storage_dir, symlinks_dir)
-
-
-def rename_video(video: Video, dict_titles: dict, sub_dir: str, work_dir: Path, dry_run: bool) -> None:
-    """[GAP] Rename video file."""
-    return _get_gap_function("rename_video")(video, dict_titles, sub_dir, work_dir, dry_run)
-
-
-def find_symlink_and_sub_dir(video: Video, symlinks_dir: Path) -> tuple:
-    """[GAP] Find symlink and subdirectory for video."""
-    return _get_gap_function("find_symlink_and_sub_dir")(video, symlinks_dir)
-
-
-def find_directory_for_video(video: Video, root_folder: Path) -> Path:
-    """[GAP] Find directory for video placement."""
-    return _get_gap_function("find_directory_for_video")(video, root_folder)
-
-
-def add_episodes_titles(series_videos: list, work_dir: Path, dry_run: bool) -> None:
-    """[GAP] Add episode titles for series."""
-    return _get_gap_function("add_episodes_titles")(series_videos, work_dir, dry_run)
-
-
-def move_file_new_nas(video: Video, storage_dir: Path, dry_run: bool) -> None:
-    """[GAP] Move file to NAS storage."""
-    return _get_gap_function("move_file_new_nas")(video, storage_dir, dry_run)
-
-
-def cleanup_directories(*directories: Path) -> None:
-    """[GAP] Clean up temporary directories."""
-    return _get_gap_function("cleanup_directories")(*directories)
-
-
-def format_undetected_filename(video: Video) -> str:
-    """[GAP] Format filename for undetected videos."""
-    return _get_gap_function("format_undetected_filename")(video)
-
-
-def cleanup_work_directory(work_dir: Path) -> None:
-    """[GAP] Clean up work directory."""
-    return _get_gap_function("cleanup_work_directory")(work_dir)
-
+from organize.pipeline import (
+    create_video_list,
+    process_video,
+    add_episodes_titles,
+    set_fr_title_and_category,
+)
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -251,12 +137,27 @@ def run_legacy_mode() -> int:
     Returns:
         Exit code from legacy main().
     """
+    import importlib.util
+
     logger.info("Running in legacy mode (organize.py)")
     console = ConsoleUI()
     console.print("[yellow]Mode legacy active - utilisation de organize.py[/yellow]")
 
     try:
-        organize_module = _load_organize_module()
+        organize_py = Path(__file__).parent.parent / "organize.py"
+        if not organize_py.exists():
+            console.print("[red]organize.py non trouvé - mode legacy indisponible[/red]")
+            return 1
+
+        # Add parent directory to path for imports
+        parent_dir = str(organize_py.parent)
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+
+        spec = importlib.util.spec_from_file_location("organize_original", organize_py)
+        organize_module = importlib.util.module_from_spec(spec)
+        sys.modules["organize_original"] = organize_module
+        spec.loader.exec_module(organize_module)
         organize_module.main()
         return 0
     except KeyboardInterrupt:
@@ -317,12 +218,12 @@ def main() -> int:
         # Display configuration
         display_configuration(cli_args, console)
 
-        # Validate API keys [GAP]
+        # Validate API keys [MODULAR]
         if not validate_api_keys():
             console.print("[red]Erreur: Cles API manquantes (TMDB_API_KEY, TVDB_API_KEY)[/red]")
             return 1
 
-        # Test API connectivity [GAP]
+        # Test API connectivity [MODULAR]
         if not test_api_connectivity():
             console.print("[red]Erreur: Impossible de se connecter aux APIs[/red]")
             return 1
@@ -350,7 +251,7 @@ def main() -> int:
 
         console.print(f"\n[bold green]{nb_videos} videos detectees[/bold green]")
 
-        # Flatten series directories [GAP]
+        # Flatten series directories [MODULAR]
         if not cli_args.dry_run:
             console.print("[blue]Aplatissement des repertoires series...[/blue]")
             aplatir_repertoire_series(cli_args.search_dir)

@@ -166,8 +166,6 @@ class VideoProcessingService:
             'video_codec': guess.get('video_codec'),
             'resolution': guess.get('screen_size'),
             'language': str(guess.get('language', '')),
-            'release_group': guess.get('release_group'),
-            'source': guess.get('source'),
         }
 
     def calculate_file_hash(self, file_path: Path) -> str:
@@ -277,7 +275,7 @@ class VideoProcessingService:
 
             # Create Video record
             video = Video.objects.create(
-                job=job,
+                processing_job=job,
                 original_path=str(file_path.parent),
                 original_filename=file_path.name,
                 file_hash=file_hash,
@@ -505,7 +503,7 @@ class VideoProcessingService:
                 )
 
             ProcessingLog.success(
-                job=video.job,
+                job=video.processing_job,
                 video=video,
                 message=f"Completed: {video.formatted_filename}"
             )
@@ -516,7 +514,7 @@ class VideoProcessingService:
             video.save()
 
             ProcessingLog.error(
-                job=video.job,
+                job=video.processing_job,
                 video=video,
                 message=f"Processing failed: {e}"
             )

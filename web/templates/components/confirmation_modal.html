@@ -103,8 +103,10 @@ Usage: {% include "components/confirmation_modal.html" with confirmation=confirm
 
                                 <!-- Year and Genres -->
                                 <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-dark-400">
-                                    {% if candidate.release_date or candidate.first_air_date %}
-                                    <span>{{ candidate.release_date|default:candidate.first_air_date|slice:":4" }}</span>
+                                    {% if candidate.release_date %}
+                                    <span>{{ candidate.release_date|slice:":4" }}</span>
+                                    {% elif candidate.first_air_date %}
+                                    <span>{{ candidate.first_air_date|slice:":4" }}</span>
                                     {% endif %}
                                     {% if candidate.genres %}
                                     <span>&bull;</span>

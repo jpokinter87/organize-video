@@ -61,7 +61,7 @@ def job_create(request):
 def job_detail(request, job_id):
     """View processing job details and progress."""
     job = get_object_or_404(ProcessingJob, id=job_id)
-    videos = Video.objects.filter(job=job).order_by('-created_at')[:50]
+    videos = Video.objects.filter(processing_job=job).order_by('-created_at')[:50]
     logs = ProcessingLog.objects.filter(job=job).order_by('-created_at')[:50]
     confirmations = PendingConfirmation.objects.filter(
         job=job, is_resolved=False

@@ -1,14 +1,20 @@
-"""Tests for file operations."""
+"""Tests unitaires pour organize.filesystem.file_ops."""
 
 import pytest
 import shutil
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from organize.filesystem.file_ops import (
     move_file,
     copy_tree,
     ensure_unique_destination,
     setup_working_directories,
+    aplatir_repertoire_series,
+    rename_video,
+    move_file_new_nas,
+    cleanup_directories,
+    cleanup_work_directory,
 )
 
 
@@ -176,3 +182,261 @@ class TestSetupWorkingDirectories:
         # The returned paths should not be created in dry_run mode
         assert not work.exists()
         assert not temp.exists()
+
+
+class TestAplatirRepertoireSeries:
+    """Tests pour aplatir_repertoire_series."""
+
+    def test_aplatit_structures_imbriquees(self, tmp_path):
+        """Aplatit les structures de séries imbriquées."""
+        series_dir = tmp_path / "Séries"
+        series_dir.mkdir()
+        show_dir = series_dir / "ShowName"
+        show_dir.mkdir()
+        nested = show_dir / "nested_folder"
+        nested.mkdir()
+        (nested / "episode.mkv").touch()
+
+        aplatir_repertoire_series(tmp_path)
+
+        assert (show_dir / "episode.mkv").exists()
+
+    def test_gere_repertoire_manquant(self, tmp_path):
+        """Gère l'absence du répertoire Séries sans erreur."""
+        # Ne devrait pas lever d'exception
+        aplatir_repertoire_series(tmp_path)
+
+    def test_gere_plusieurs_niveaux(self, tmp_path):
+        """Aplatit les fichiers des sous-répertoires vers le niveau parent."""
+        series_dir = tmp_path / "Séries"
+        series_dir.mkdir()
+        show_dir = series_dir / "Breaking Bad"
+        show_dir.mkdir()
+        season_dir = show_dir / "Saison 01"
+        season_dir.mkdir()
+        (season_dir / "S01E01.mkv").touch()
+        (season_dir / "S01E02.mkv").touch()
+
+        aplatir_repertoire_series(tmp_path)
+
+        # Les fichiers devraient être remontés au niveau show_dir
+        assert (show_dir / "S01E01.mkv").exists()
+        assert (show_dir / "S01E02.mkv").exists()
+
+
+class TestRenameVideo:
+    """Tests pour rename_video."""
+
+    def test_dry_run_definit_chemin_sans_deplacer(self):
+        """Mode dry_run définit le chemin sans déplacer le fichier."""
+        video = MagicMock()
+        video.is_serie.return_value = False
+        video.is_not_doc.return_value = True
+        video.destination_file = Path("/tmp/test.mkv")
+        video.formatted_filename = "Test (2020) MULTI x264 1080p.mkv"
+
+        rename_video(video, {}, "Films", Path("/tmp/work"), dry_run=True)
+
+        assert video.complete_path_temp_links is not None
+
+    def test_cree_repertoire_destination(self, tmp_path):
+        """Crée le répertoire de destination si nécessaire."""
+        source = tmp_path / "source.mkv"
+        source.touch()
+        work_dir = tmp_path / "work"
+
+        video = MagicMock()
+        video.is_serie.return_value = False
+        video.is_not_doc.return_value = True
+        video.destination_file = source
+        video.formatted_filename = "Test.mkv"
+
+        rename_video(video, {}, "Films", work_dir, dry_run=False)
+
+        assert (work_dir / "Films").exists()
+
+    def test_gere_series_avec_cache(self, tmp_path):
+        """Gère les séries avec le cache de titres."""
+        source = tmp_path / "source.mkv"
+        source.touch()
+        work_dir = tmp_path / "work"
+        work_dir.mkdir()
+
+        video = MagicMock()
+        video.is_serie.return_value = True
+        video.is_not_doc.return_value = True
+        video.destination_file = source
+        video.title_fr = "Breaking Bad"
+        video.date_film = 2008
+        video.formatted_filename = "Breaking Bad S01E01.mkv"
+
+        dic_serie = {
+            "Breaking Bad": (
+                "Breaking Bad", 2008, "Drama",
+                Path("/symlinks/series"), Path("Séries/b-c/Breaking Bad (2008)")
+            )
+        }
+
+        rename_video(video, dic_serie, "Séries", work_dir, dry_run=True)
+
+        assert video.complete_path_temp_links is not None
+
+
+class TestMoveFileNewNas:
+    """Tests pour move_file_new_nas."""
+
+    def test_dry_run_ne_deplace_pas(self, tmp_path):
+        """Mode dry_run log uniquement sans déplacer le fichier."""
+        source = tmp_path / "source.mkv"
+        source.touch()
+
+        video = MagicMock()
+        video.complete_path_original = source
+        video.complete_path_temp_links = tmp_path / "work" / "Films" / "test.mkv"
+
+        move_file_new_nas(video, tmp_path / "storage", dry_run=True)
+
+        assert source.exists()
+
+    def test_deplace_vers_stockage(self, tmp_path):
+        """Déplace le fichier vers le stockage NAS."""
+        source = tmp_path / "source.mkv"
+        source.write_text("contenu video")
+        storage = tmp_path / "storage"
+        work_dir = tmp_path / "work"
+
+        video = MagicMock()
+        video.complete_path_original = source
+        video.complete_path_temp_links = work_dir / "Films" / "test.mkv"
+        video.complete_path_temp_links.parent.mkdir(parents=True, exist_ok=True)
+
+        move_file_new_nas(video, storage, dry_run=False)
+
+        assert not source.exists()
+
+    def test_gere_fichier_existant_meme_taille(self, tmp_path):
+        """Gère les doublons de même taille en supprimant la source."""
+        source = tmp_path / "source.mkv"
+        source.write_text("contenu")
+        storage = tmp_path / "storage"
+        dest = storage / "Films" / "test.mkv"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text("contenu")  # Même taille
+
+        video = MagicMock()
+        video.complete_path_original = source
+        video.complete_path_temp_links = tmp_path / "work" / "Films" / "test.mkv"
+        video.complete_path_temp_links.parent.mkdir(parents=True, exist_ok=True)
+
+        move_file_new_nas(video, storage, dry_run=False)
+
+        assert not source.exists()
+        assert dest.exists()
+
+
+class TestCleanupDirectories:
+    """Tests pour cleanup_directories."""
+
+    def test_supprime_repertoires_non_vides(self, tmp_path):
+        """Supprime les répertoires non vides."""
+        dir1 = tmp_path / "dir1"
+        dir1.mkdir()
+        (dir1 / "file.txt").touch()
+
+        cleanup_directories(dir1)
+
+        assert not dir1.exists()
+
+    def test_gere_repertoires_inexistants(self, tmp_path):
+        """Gère les répertoires inexistants sans erreur."""
+        non_existent = tmp_path / "nonexistent"
+
+        # Ne devrait pas lever d'exception
+        cleanup_directories(non_existent)
+
+    def test_nettoie_plusieurs_repertoires(self, tmp_path):
+        """Nettoie plusieurs répertoires en une seule fois."""
+        dir1 = tmp_path / "dir1"
+        dir2 = tmp_path / "dir2"
+        dir1.mkdir()
+        dir2.mkdir()
+        (dir1 / "file1.txt").touch()
+        (dir2 / "file2.txt").touch()
+
+        cleanup_directories(dir1, dir2)
+
+        assert not dir1.exists()
+        assert not dir2.exists()
+
+    def test_ignore_repertoire_vide(self, tmp_path):
+        """Ignore les répertoires vides."""
+        empty_dir = tmp_path / "empty"
+        empty_dir.mkdir()
+
+        cleanup_directories(empty_dir)
+
+        # Un répertoire vide ne devrait pas être supprimé
+        # (la fonction vérifie any(directory.iterdir()))
+        assert empty_dir.exists()
+
+
+class TestCleanupWorkDirectory:
+    """Tests pour cleanup_work_directory."""
+
+    def test_gere_repertoire_inexistant(self, tmp_path):
+        """Gère les répertoires inexistants sans erreur."""
+        non_existent = tmp_path / "nonexistent"
+
+        # Ne devrait pas lever d'exception
+        cleanup_work_directory(non_existent)
+
+    def test_supprime_saisons_imbriquees(self, tmp_path):
+        """Supprime les dossiers Saison imbriqués et remonte les fichiers."""
+        work_dir = tmp_path / "work"
+        work_dir.mkdir()
+        saison_dir = work_dir / "Saison 01"
+        saison_dir.mkdir()
+        nested_saison = saison_dir / "Saison 01"
+        nested_saison.mkdir()
+        (nested_saison / "episode.mkv").touch()
+
+        cleanup_work_directory(work_dir)
+
+        # Le fichier devrait être remonté au niveau supérieur
+        assert (saison_dir / "episode.mkv").exists()
+        assert not nested_saison.exists()
+
+    def test_preserve_structure_normale(self, tmp_path):
+        """Préserve la structure normale sans doublons."""
+        work_dir = tmp_path / "work"
+        work_dir.mkdir()
+        saison_dir = work_dir / "Saison 01"
+        saison_dir.mkdir()
+        (saison_dir / "episode.mkv").touch()
+
+        cleanup_work_directory(work_dir)
+
+        assert (saison_dir / "episode.mkv").exists()
+
+    def test_gere_plusieurs_saisons_imbriquees(self, tmp_path):
+        """Gère plusieurs saisons avec imbrication."""
+        work_dir = tmp_path / "work"
+        work_dir.mkdir()
+
+        # Saison 01 avec imbrication
+        saison01 = work_dir / "Saison 01"
+        saison01.mkdir()
+        nested01 = saison01 / "Saison 01"
+        nested01.mkdir()
+        (nested01 / "S01E01.mkv").touch()
+
+        # Saison 02 sans imbrication
+        saison02 = work_dir / "Saison 02"
+        saison02.mkdir()
+        (saison02 / "S02E01.mkv").touch()
+
+        cleanup_work_directory(work_dir)
+
+        assert (saison01 / "S01E01.mkv").exists()
+        assert not nested01.exists()
+        assert (saison02 / "S02E01.mkv").exists()

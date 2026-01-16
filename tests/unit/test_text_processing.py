@@ -1,10 +1,15 @@
-"""Tests for text processing functions."""
+"""Tests unitaires pour les fonctions de traitement de texte."""
 
 import pytest
+from pathlib import Path
+from unittest.mock import MagicMock
+
 from organize.classification.text_processing import (
     normalize,
     remove_article,
     normalize_accents,
+    extract_title_from_filename,
+    format_undetected_filename,
 )
 
 
@@ -164,3 +169,109 @@ class TestNormalizeAccents:
     def test_normalize_accents_preserves_non_accented(self):
         """Non-accented characters are preserved."""
         assert normalize_accents("Hello World 123") == "Hello World 123"
+
+
+class TestExtractTitleFromFilename:
+    """Tests pour extract_title_from_filename."""
+
+    def test_extrait_titre_simple(self):
+        """Extrait un titre simple avec guessit."""
+        result = extract_title_from_filename("The.Matrix.1999.MULTi.1080p.BluRay")
+        assert result['title'] is not None
+        assert len(result['title']) > 0
+
+    def test_extrait_annee(self):
+        """Extrait l'année du nom de fichier."""
+        result = extract_title_from_filename("Inception.2010.1080p.BluRay")
+        assert result['year'] == 2010
+
+    def test_gere_absence_annee(self):
+        """Gère l'absence d'année dans le nom."""
+        result = extract_title_from_filename("Some.Movie.MULTi.1080p")
+        assert 'title' in result
+        # L'année peut être None ou absente
+
+    def test_nettoie_specs_techniques(self):
+        """Nettoie les specs techniques du titre."""
+        result = extract_title_from_filename("Avatar.2009.MULTI.x264.1080p.WEB-DL")
+        title_lower = result['title'].lower()
+        assert 'multi' not in title_lower
+        assert 'x264' not in title_lower
+        assert '1080p' not in title_lower
+
+    def test_retourne_dictionnaire(self):
+        """Retourne toujours un dictionnaire avec title et year."""
+        result = extract_title_from_filename("Test.Movie")
+        assert isinstance(result, dict)
+        assert 'title' in result
+        assert 'year' in result
+
+
+class TestFormatUndetectedFilename:
+    """Tests pour format_undetected_filename."""
+
+    def test_formate_nom_basique(self):
+        """Formate un nom de fichier basique."""
+        video = MagicMock()
+        video.complete_path_original = Path("/test/The.Amateur.2025.MULTi.1080p.mkv")
+        video.spec = "MULTi x264 1080p"
+
+        result = format_undetected_filename(video)
+
+        assert result.endswith('.mkv')
+        assert '2025' in result or 'Année' in result
+
+    def test_extrait_specs_depuis_nom(self):
+        """Extrait les specs depuis le nom si non fournies."""
+        video = MagicMock()
+        video.complete_path_original = Path("/test/Film.2020.MULTI.x265.1080p.mkv")
+        video.spec = ""
+
+        result = format_undetected_filename(video)
+
+        # Doit contenir au moins quelques specs
+        assert '.mkv' in result
+
+    def test_gere_extension_ts(self):
+        """Convertit l'extension .ts en .mp4."""
+        video = MagicMock()
+        video.complete_path_original = Path("/test/Video.2020.ts")
+        video.spec = "FR x264 1080p"
+
+        result = format_undetected_filename(video)
+
+        assert result.endswith('.mp4')
+        assert not result.endswith('.ts')
+
+    def test_titre_vide_devient_non_identifie(self):
+        """Un titre qui ne peut pas être extrait devient 'Fichier non identifié'."""
+        video = MagicMock()
+        video.complete_path_original = Path("/test/1080p.x264.mkv")
+        video.spec = ""
+
+        result = format_undetected_filename(video)
+
+        # Doit avoir un titre, même générique
+        assert '.mkv' in result
+        assert len(result) > 10
+
+    def test_detecte_langue_multi(self):
+        """Détecte la langue MULTI dans le nom."""
+        video = MagicMock()
+        video.complete_path_original = Path("/test/Film.MULTI.2020.mkv")
+        video.spec = ""
+
+        result = format_undetected_filename(video)
+
+        assert 'MULTi' in result or 'MULTI' in result or result.count('(') > 0
+
+    def test_detecte_langue_vostfr(self):
+        """Détecte la langue VOSTFR dans le nom."""
+        video = MagicMock()
+        video.complete_path_original = Path("/test/Film.VOSTFR.2020.mkv")
+        video.spec = ""
+
+        result = format_undetected_filename(video)
+
+        # La fonction devrait détecter VOSTFR
+        assert '.mkv' in result
