@@ -54,7 +54,7 @@ def move_file(source: Path, destination: Path, dry_run: bool = False) -> bool:
         logger.info(f'Fichier déplacé: {destination}')
         return True
 
-    except Exception as e:
+    except (OSError, shutil.Error) as e:
         logger.error(f'Erreur lors du déplacement de {source}: {e}')
         return False
 
@@ -86,7 +86,7 @@ def copy_tree(source_dir: Path, dest_dir: Path, dry_run: bool = False) -> bool:
         logger.info(f"Arborescence copiée: {source_dir} -> {dest_dir}")
         return True
 
-    except Exception as e:
+    except (OSError, shutil.Error) as e:
         logger.error(f"Erreur lors de la copie de l'arborescence: {e}")
         return False
 
@@ -165,7 +165,7 @@ def aplatir_repertoire_series(repertoire_initial: Path) -> None:
                     chemin_destination = repertoire_destination / fichier.name
                     if not chemin_destination.exists():
                         shutil.move(str(fichier), str(chemin_destination))
-        except Exception as e:
+        except (OSError, shutil.Error) as e:
             logger.warning(f"Erreur lors du déplacement des fichiers: {e}")
 
     def traiter_sous_repertoires_series(repertoire_series: Path) -> None:
@@ -180,13 +180,13 @@ def aplatir_repertoire_series(repertoire_initial: Path) -> None:
                                 s_rep.rmdir()
                             except OSError as e:
                                 logger.warning(f"Impossible de supprimer {s_rep}: {e}")
-        except Exception as e:
+        except OSError as e:
             logger.warning(f"Erreur lors du traitement des séries: {e}")
 
     try:
         for sous_repertoire in repertoire_initial.glob('**/Séries'):
             traiter_sous_repertoires_series(sous_repertoire)
-    except Exception as e:
+    except OSError as e:
         logger.warning(f"Erreur lors de l'aplatissement de la structure des séries: {e}")
 
 
@@ -249,7 +249,7 @@ def rename_video(
         else:
             logger.warning(f"Fichier source non trouvé: {source}")
 
-    except Exception as e:
+    except (OSError, shutil.Error) as e:
         logger.error(f"Erreur lors du renommage de la vidéo: {e}")
 
 
@@ -313,7 +313,7 @@ def move_file_new_nas(
         else:
             logger.warning(f"Fichier source non trouvé: {origine}")
 
-    except Exception as e:
+    except (OSError, shutil.Error) as e:
         logger.error(f"Erreur lors du déplacement vers le NAS: {e}")
 
 
@@ -329,7 +329,7 @@ def cleanup_directories(*directories: Path) -> None:
             try:
                 shutil.rmtree(directory, ignore_errors=True)
                 logger.debug(f"Répertoire nettoyé: {directory}")
-            except Exception as e:
+            except OSError as e:
                 logger.warning(f"Impossible de nettoyer {directory}: {e}")
 
 
@@ -374,7 +374,7 @@ def cleanup_work_directory(work_dir: Path, console: Optional[object] = None) -> 
 
                     # Récursion
                     removed += remove_nested_saisons(item)
-        except Exception as e:
+        except OSError as e:
             logger.warning(f"Erreur lors du nettoyage: {e}")
 
         return removed
@@ -383,7 +383,7 @@ def cleanup_work_directory(work_dir: Path, console: Optional[object] = None) -> 
         total_removed = remove_nested_saisons(work_dir)
         if total_removed > 0:
             logger.info(f"Total des dossiers Saison imbriqués supprimés: {total_removed}")
-    except Exception as e:
+    except OSError as e:
         logger.warning(f"Erreur lors du nettoyage du répertoire de travail: {e}")
 
 
@@ -429,7 +429,7 @@ Votre choix (1/2/3): """).strip()
                 shutil.move(str(new_file_path), str(waiting_nas_file))
                 create_symlink(waiting_nas_file, waiting_folder / new_file_path.name)
                 logger.info(f"Fichier déplacé vers l'attente: {waiting_nas_file}")
-            except Exception as e:
+            except (OSError, shutil.Error) as e:
                 logger.error(f"Erreur lors du déplacement: {e}")
             return existing_file_path
 
@@ -442,7 +442,7 @@ Votre choix (1/2/3): """).strip()
                 shutil.move(str(existing_file_path), str(waiting_nas_file))
                 create_symlink(waiting_nas_file, waiting_folder / existing_file_path.name)
                 logger.info(f"Ancien fichier déplacé vers l'attente: {waiting_nas_file}")
-            except Exception as e:
+            except (OSError, shutil.Error) as e:
                 logger.error(f"Erreur lors du déplacement de l'ancien fichier: {e}")
             return new_file_path
 

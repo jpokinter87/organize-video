@@ -42,6 +42,6 @@ def checksum_md5(filename: Path) -> str:
                 f.seek(size // 8)
                 md5.update(f.read(PARTIAL_HASH_CHUNK_SIZE))
         return md5.hexdigest()
-    except Exception as e:
-        logger.debug(f'Exception {e} calculating MD5 hash')
+    except (OSError, IOError) as e:
+        logger.debug(f'Erreur I/O lors du calcul MD5 de {filename}: {e}')
         return 'no_md5_hash'

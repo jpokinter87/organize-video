@@ -79,7 +79,9 @@ class TestTvdbClientGetClient:
 
         with patch("organize.api.tvdb_client.TVDB_AVAILABLE", True), \
              patch("organize.api.tvdb_client.tvdb_api") as mock_api:
-            mock_api.Tvdb.side_effect = Exception("Connection error")
+            # Use ConnectionError which is a built-in exception we catch
+            mock_api.Tvdb.side_effect = ConnectionError("Connection error")
+            mock_api.tvdb_error = type('tvdb_error', (Exception,), {})
 
             result = client._get_client()
 

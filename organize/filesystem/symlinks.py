@@ -30,8 +30,8 @@ def create_symlink(source: Path, destination: Path, dry_run: bool = False) -> No
         destination.symlink_to(source)
         logger.debug(f'Symlink created: {source} -> {destination}')
 
-    except Exception as e:
-        logger.warning(f"Error creating symlink {source} -> {destination}: {e}")
+    except OSError as e:
+        logger.warning(f"Erreur lors de la création du symlink {source} -> {destination}: {e}")
 
 
 def verify_symlinks(directory: Path) -> None:
@@ -58,8 +58,8 @@ def verify_symlinks(directory: Path) -> None:
             try:
                 link.unlink()
                 logger.info(f"Broken link removed: {link}")
-            except Exception as e:
-                logger.error(f"Could not remove broken link {link}: {e}")
+            except OSError as e:
+                logger.error(f"Impossible de supprimer le lien cassé {link}: {e}")
     else:
         logger.info("All symlinks are valid")
 
