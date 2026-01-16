@@ -31,7 +31,7 @@ from organize.filesystem.paths import (
     find_similar_file,
     find_similar_file_in_folder,
     clear_caches,
-    SubfolderCache,
+    LRUCache,
 )
 
 __all__ = [
@@ -59,5 +59,5 @@ __all__ = [
     "find_similar_file",
     "find_similar_file_in_folder",
     "clear_caches",
-    "SubfolderCache",
+    "LRUCache",
 ]

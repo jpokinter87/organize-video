@@ -24,7 +24,6 @@ from organize.config import (
     CATEGORIES,
     PROCESS_ALL_FILES_DAYS,
 )
-from organize.config.context import execution_context
 from organize.models import Video
 from organize.api import CacheDB, validate_api_keys, test_api_connectivity
 from organize.classification import media_info, format_undetected_filename

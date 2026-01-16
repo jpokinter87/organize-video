@@ -1,6 +1,7 @@
 """Fonctions de résolution de chemins pour l'organisation des vidéos."""
 
 import re
+from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, Optional, Tuple, TYPE_CHECKING
 
@@ -10,28 +11,63 @@ if TYPE_CHECKING:
     from organize.models.video import Video
 
 
-class SubfolderCache:
-    """Cache simple pour les recherches de sous-dossiers afin d'éviter les parcours répétés du système de fichiers."""
+# Taille maximale du cache LRU
+MAX_CACHE_SIZE = 1000
 
-    def __init__(self):
-        self._cache: Dict[Tuple[str, str], Path] = {}
+
+class LRUCache:
+    """
+    Cache LRU (Least Recently Used) pour les recherches de sous-dossiers.
+
+    Évite les parcours répétés du système de fichiers tout en limitant
+    l'utilisation mémoire grâce à une politique d'éviction.
+
+    Attributes:
+        max_size: Nombre maximum d'entrées dans le cache.
+    """
+
+    def __init__(self, max_size: int = MAX_CACHE_SIZE):
+        self._cache: OrderedDict[Tuple[str, str], Path] = OrderedDict()
+        self._max_size = max_size
 
     def get(self, key: Tuple[str, str]) -> Optional[Path]:
-        """Récupère le chemin en cache pour une clé."""
-        return self._cache.get(key)
+        """
+        Récupère le chemin en cache pour une clé.
+
+        Déplace l'entrée en fin de liste (plus récemment utilisée).
+        """
+        if key in self._cache:
+            # Déplacer l'entrée en fin (plus récemment utilisée)
+            self._cache.move_to_end(key)
+            return self._cache[key]
+        return None
 
     def set(self, key: Tuple[str, str], value: Path) -> None:
-        """Met en cache un chemin pour une clé."""
+        """
+        Met en cache un chemin pour une clé.
+
+        Évince l'entrée la moins récemment utilisée si le cache est plein.
+        """
+        if key in self._cache:
+            self._cache.move_to_end(key)
+        else:
+            if len(self._cache) >= self._max_size:
+                # Supprimer l'entrée la plus ancienne (début de la liste)
+                self._cache.popitem(last=False)
         self._cache[key] = value
 
     def clear(self) -> None:
         """Efface toutes les entrées en cache."""
         self._cache.clear()
 
+    def __len__(self) -> int:
+        """Retourne le nombre d'entrées dans le cache."""
+        return len(self._cache)
+
 
 # Caches au niveau du module
-subfolder_cache = SubfolderCache()
-series_subfolder_cache = SubfolderCache()
+subfolder_cache = LRUCache()
+series_subfolder_cache = LRUCache()
 
 
 def in_range(value: str, start: str, end: str) -> bool:

@@ -1,6 +1,7 @@
 """Command-line interface argument parsing."""
 
 import argparse
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
@@ -165,6 +166,10 @@ def validate_directories(
     """
     Validate and optionally create directories.
 
+    Checks that:
+    - Input directory exists and is readable
+    - Output directories are writable (or can be created)
+
     Args:
         input_dir: Input directory (must exist).
         output_dir: Output directory.
@@ -177,19 +182,44 @@ def validate_directories(
     """
     # Input must exist
     if not input_dir.exists():
-        logger.error(f"Input directory {input_dir} does not exist")
+        logger.error(f"Répertoire d'entrée inexistant: {input_dir}")
         return False
+
+    # Input must be readable
+    if not os.access(input_dir, os.R_OK):
+        logger.error(f"Répertoire d'entrée non accessible en lecture: {input_dir}")
+        return False
+
+    # Prepare list of output directories to validate
+    dirs_to_validate = [output_dir]
+    if symlinks_dir:
+        dirs_to_validate.append(symlinks_dir)
+    if storage_dir:
+        dirs_to_validate.append(storage_dir)
+
+    # Check write access for existing directories, or parent directories for new ones
+    for dir_path in dirs_to_validate:
+        if dir_path.exists():
+            if not os.access(dir_path, os.W_OK):
+                logger.error(f"Répertoire non accessible en écriture: {dir_path}")
+                return False
+        else:
+            # Check if we can create the directory (parent must be writable)
+            parent = dir_path.parent
+            while not parent.exists() and parent != parent.parent:
+                parent = parent.parent
+            if parent.exists() and not os.access(parent, os.W_OK):
+                logger.error(f"Impossible de créer le répertoire (parent non accessible en écriture): {dir_path}")
+                return False
 
     # Create output directories if not dry run
     if not dry_run:
-        dirs_to_create = [output_dir]
-        if symlinks_dir:
-            dirs_to_create.append(symlinks_dir)
-        if storage_dir:
-            dirs_to_create.append(storage_dir)
-
-        for dir_path in dirs_to_create:
-            dir_path.mkdir(parents=True, exist_ok=True)
+        for dir_path in dirs_to_validate:
+            try:
+                dir_path.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                logger.error(f"Impossible de créer le répertoire {dir_path}: {e}")
+                return False
 
     return True
 
