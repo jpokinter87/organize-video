@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from loguru import logger
-from rich.console import Console
 from tqdm import tqdm
+
+from organize.ui.console import console
 
 from organize.models.video import Video
 from organize.utils.hash import checksum_md5
@@ -20,9 +21,7 @@ from organize.utils.app_state import (
 from organize.classification.type_detector import type_of_video, extract_file_infos
 from organize.filesystem.discovery import get_files
 from organize.pipeline.processor import create_paths, should_skip_duplicate
-
-# Console pour l'affichage
-console = Console()
+from organize.config.settings import PROCESS_ALL_FILES_DAYS, MULTIPROCESSING_VIDEO_THRESHOLD
 
 
 def process_single_video(args: Tuple[Path, Path, Path, bool, bool]) -> Optional[Video]:
@@ -74,7 +73,9 @@ def process_single_video(args: Tuple[Path, Path, Path, bool, bool]) -> Optional[
         return video
 
     except Exception as e:
-        logger.error(f"Erreur lors du traitement de {file}: {e}")
+        # Logger au niveau WARNING avec traceback pour le débogage
+        logger.warning(f"Échec du traitement de {file.name}: {type(e).__name__}: {e}")
+        logger.opt(exception=True).debug(f"Traceback complet pour {file}")
         return None
 
 
@@ -95,12 +96,13 @@ def create_video_list(
 
     Args:
         search_dir: Répertoire à scanner pour les vidéos.
-        days_to_manage: Nombre de jours à considérer (100000000.0 = tous les fichiers).
+        days_to_manage: Nombre de jours à considérer (PROCESS_ALL_FILES_DAYS = tous les fichiers).
         temp_dir: Répertoire temporaire pour les liens symboliques.
         storage_dir: Répertoire de stockage contenant les bases de données.
         force_mode: Si True, ignore la vérification des hashes.
         dry_run: Si True, simule les opérations sans modifier les fichiers.
-        use_multiprocessing: Si True et plus de 10 fichiers, utilise le multiprocessing.
+        use_multiprocessing: Si True et plus de MULTIPROCESSING_VIDEO_THRESHOLD fichiers,
+            utilise le multiprocessing.
 
     Returns:
         Liste des objets Video à traiter.
@@ -108,7 +110,7 @@ def create_video_list(
     files_to_process = []
 
     # Filtrage des fichiers
-    if days_to_manage == 100000000.0:
+    if days_to_manage == PROCESS_ALL_FILES_DAYS:
         last_exec = 0
     else:
         if dry_run:
@@ -118,7 +120,7 @@ def create_video_list(
             last_exec = load_last_exec() if not days_to_manage else time.time() - (86400 * days_to_manage)
 
     for file in get_files(search_dir):
-        if file.stat().st_ctime > last_exec or days_to_manage == 100000000.0:
+        if file.stat().st_ctime > last_exec or days_to_manage == PROCESS_ALL_FILES_DAYS:
             if any(exclude in file.parts for exclude in ["ISX", "Applications"]):
                 continue
             files_to_process.append(file)
@@ -139,7 +141,7 @@ def create_video_list(
     # Préparation des arguments avec les paramètres force et dry_run
     args_list = [(f, temp_dir, storage_dir, force_mode, dry_run) for f in files_to_process]
 
-    if use_multiprocessing and len(files_to_process) > 10:
+    if use_multiprocessing and len(files_to_process) > MULTIPROCESSING_VIDEO_THRESHOLD:
         console.print(f"🔄 Traitement en parallèle de {len(files_to_process)} fichiers...")
         with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
             results = list(tqdm(
@@ -151,7 +153,21 @@ def create_video_list(
         console.print("🔄 Traitement séquentiel...")
         results = [process_single_video(args) for args in tqdm(args_list, desc="Traitement des vidéos")]
 
-    # Filtrage des résultats valides
+    # Filtrage des résultats valides et comptage des échecs
     video_list = [video for video in results if video is not None]
+    failed_count = len(results) - len(video_list)
+
     logger.info(f"Nombre de vidéos valides traitées: {len(video_list)}")
+
+    if failed_count > 0:
+        logger.warning(f"Nombre de fichiers ignorés ou en échec: {failed_count}")
+        # Identifier les fichiers échoués pour le rapport
+        failed_files = [
+            args_list[i][0].name for i, video in enumerate(results) if video is None
+        ]
+        for fname in failed_files[:5]:  # Limiter à 5 pour éviter spam
+            logger.debug(f"  - {fname}")
+        if len(failed_files) > 5:
+            logger.debug(f"  ... et {len(failed_files) - 5} autres fichiers")
+
     return video_list

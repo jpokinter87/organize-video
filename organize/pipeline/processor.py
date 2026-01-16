@@ -91,7 +91,7 @@ def should_skip_duplicate(
 
     # Vérifier si le hash existe
     if hash_exists_fn(hash_value):
-        logger.info("Hash déjà présent dans la base de données")
+        logger.debug("Hash déjà présent dans la base de données")
         return True
 
     return False

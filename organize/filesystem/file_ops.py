@@ -1,9 +1,14 @@
-"""Opérations sur les fichiers pour le déplacement, la copie et le renommage."""
+"""Opérations sur les fichiers pour le déplacement, la copie et le renommage.
+
+Convention de gestion d'erreurs:
+- Opérations shutil (move, copy, rmtree): capture (OSError, shutil.Error)
+- Opérations Path (rmdir, mkdir, glob, iterdir): capture OSError seul
+"""
 
 import re
 import shutil
 from pathlib import Path
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import Optional, Tuple, TYPE_CHECKING, Union
 
 from loguru import logger
 from rich.console import Console
@@ -12,6 +17,12 @@ from organize.filesystem.symlinks import create_symlink
 
 if TYPE_CHECKING:
     from organize.models.video import Video
+
+# Type alias pour les exceptions de fichiers (opérations shutil)
+FileOperationError = (OSError, shutil.Error)
+
+# Pattern regex pré-compilé pour les dossiers de saison
+_SEASON_FOLDER_PATTERN = re.compile(r'Saison \d{2}')
 
 # Console pour l'affichage interactif
 _console = Console()
@@ -73,7 +84,7 @@ def move_file(source: Path, destination: Path, dry_run: bool = False) -> bool:
         logger.info(f'Fichier déplacé: {destination}')
         return True
 
-    except (OSError, shutil.Error) as e:
+    except FileOperationError as e:
         logger.error(f'Erreur lors du déplacement de {source}: {e}')
         return False
 
@@ -105,7 +116,7 @@ def copy_tree(source_dir: Path, dest_dir: Path, dry_run: bool = False) -> bool:
         logger.info(f"Arborescence copiée: {source_dir} -> {dest_dir}")
         return True
 
-    except (OSError, shutil.Error) as e:
+    except FileOperationError as e:
         logger.error(f"Erreur lors de la copie de l'arborescence: {e}")
         return False
 
@@ -184,7 +195,7 @@ def aplatir_repertoire_series(repertoire_initial: Path) -> None:
                     chemin_destination = repertoire_destination / fichier.name
                     if not chemin_destination.exists():
                         shutil.move(str(fichier), str(chemin_destination))
-        except (OSError, shutil.Error) as e:
+        except FileOperationError as e:
             logger.warning(f"Erreur lors du déplacement des fichiers: {e}")
 
     def traiter_sous_repertoires_series(repertoire_series: Path) -> None:
@@ -268,7 +279,7 @@ def rename_video(
         else:
             logger.warning(f"Fichier source non trouvé: {source}")
 
-    except (OSError, shutil.Error) as e:
+    except FileOperationError as e:
         logger.error(f"Erreur lors du renommage de la vidéo: {e}")
 
 
@@ -321,7 +332,8 @@ def move_file_new_nas(
                 logger.info(f"Fichier déplacé: {destination}")
 
             # Mise à jour du lien symbolique
-            if video.complete_path_temp_links and video.complete_path_temp_links.exists():
+            # Note: exists() retourne False pour les symlinks cassés, mais is_symlink() retourne True
+            if video.complete_path_temp_links and (video.complete_path_temp_links.exists() or video.complete_path_temp_links.is_symlink()):
                 video.complete_path_temp_links.unlink()
             if video.complete_path_temp_links:
                 video.complete_path_temp_links.parent.mkdir(parents=True, exist_ok=True)
@@ -330,7 +342,7 @@ def move_file_new_nas(
         else:
             logger.warning(f"Fichier source non trouvé: {origine}")
 
-    except (OSError, shutil.Error) as e:
+    except FileOperationError as e:
         logger.error(f"Erreur lors du déplacement vers le NAS: {e}")
 
 
@@ -374,9 +386,9 @@ def cleanup_work_directory(work_dir: Path, console: Optional[object] = None) -> 
             for item in list(path.iterdir()):
                 if item.is_dir():
                     # Si c'est un dossier Saison qui contient un autre dossier Saison
-                    if re.match(r'Saison \d{2}', item.name):
+                    if _SEASON_FOLDER_PATTERN.match(item.name):
                         for sub_item in list(item.iterdir()):
-                            if sub_item.is_dir() and re.match(r'Saison \d{2}', sub_item.name):
+                            if sub_item.is_dir() and _SEASON_FOLDER_PATTERN.match(sub_item.name):
                                 # Déplacer les fichiers du sous-dossier vers le dossier parent
                                 for file in sub_item.iterdir():
                                     if file.is_file():
@@ -463,7 +475,7 @@ Votre choix (1/2/3): """)
                 shutil.move(str(new_file_path), str(waiting_nas_file))
                 create_symlink(waiting_nas_file, waiting_folder / new_file_path.name)
                 logger.info(f"Fichier déplacé vers l'attente: {waiting_nas_file}")
-            except (OSError, shutil.Error) as e:
+            except FileOperationError as e:
                 logger.error(f"Erreur lors du déplacement: {e}")
             return existing_file_path
 
@@ -476,7 +488,7 @@ Votre choix (1/2/3): """)
                 shutil.move(str(existing_file_path), str(waiting_nas_file))
                 create_symlink(waiting_nas_file, waiting_folder / existing_file_path.name)
                 logger.info(f"Ancien fichier déplacé vers l'attente: {waiting_nas_file}")
-            except (OSError, shutil.Error) as e:
+            except FileOperationError as e:
                 logger.error(f"Erreur lors du déplacement de l'ancien fichier: {e}")
             return new_file_path
 

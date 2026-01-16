@@ -178,7 +178,8 @@ def find_directory_for_video(video: "Video", root_folder: Path) -> Path:
         return cached_result
 
     # Cas spécial pour les FILMS non détectés uniquement
-    if (not video.title_fr or video.title_fr.strip() == '') and video.is_film_anim():
+    title_is_empty = not video.title_fr or not video.title_fr.strip()
+    if title_is_empty and video.is_film_anim():
         non_detectes_dir = root_folder / 'non détectés'
         subfolder_cache.set(cache_key, non_detectes_dir)
         return non_detectes_dir

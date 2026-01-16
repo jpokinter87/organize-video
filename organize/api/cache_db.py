@@ -8,7 +8,10 @@ from typing import Dict, Optional
 
 from loguru import logger
 
-from organize.config.settings import CACHE_EXPIRATION_SECONDS
+from organize.config.settings import CACHE_EXPIRATION_SECONDS, DEFAULT_STORAGE_DIR, CACHE_DB_FILENAME
+
+# Chemin par défaut absolu pour la base de données de cache
+_DEFAULT_CACHE_PATH = DEFAULT_STORAGE_DIR / CACHE_DB_FILENAME
 
 
 class CacheDB:
@@ -23,14 +26,14 @@ class CacheDB:
         conn: Active database connection, or None if closed.
     """
 
-    def __init__(self, db_path: Path = Path("cache.db")) -> None:
+    def __init__(self, db_path: Optional[Path] = None) -> None:
         """
         Initialize the cache database.
 
         Args:
-            db_path: Path to the SQLite database file. Created if not exists.
+            db_path: Path to the SQLite database file. Defaults to storage_dir/cache.db.
         """
-        self.db_path = db_path
+        self.db_path = db_path if db_path is not None else _DEFAULT_CACHE_PATH
         self.conn: Optional[sqlite3.Connection] = None
         self._connect()
 

@@ -96,6 +96,8 @@ def test_api_connectivity(
     if tvdb_key:
         try:
             import tvdb_api
+            from tvdb_api import TvdbError
+
             tvdb_test = tvdb_api.Tvdb(
                 apikey=tvdb_key,
                 language='fr',
@@ -105,11 +107,28 @@ def test_api_connectivity(
             # En cas d'échec, TVDB affichera un avertissement mais ne stoppera pas le traitement
             if console:
                 console.print_success("Connexion TVDB réussie")
-        except Exception as e:
-            logger.warning(f"Test de connexion TVDB échoué: {e}")
+
+        except TvdbError as e:
+            # Erreur spécifique à TVDB (API key invalide, limite de requêtes, etc.)
+            logger.warning(f"Erreur API TVDB: {e}")
             if console:
-                console.print_warning(f"Avertissement connexion TVDB: {e}")
-                console.print_info("Les titres d'épisodes pourraient ne pas être disponibles")
+                console.print_warning(f"Erreur API TVDB: {e}")
+                console.print_info("Les titres d'épisodes ne seront pas disponibles")
+            # Ne pas retourner False - TVDB est optionnel
+
+        except (ConnectionError, TimeoutError) as e:
+            # Erreurs réseau
+            logger.warning(f"Erreur réseau TVDB: {e}")
+            if console:
+                console.print_warning(f"Connexion TVDB impossible (réseau): {e}")
+                console.print_info("Les titres d'épisodes ne seront pas disponibles")
+            # Ne pas retourner False - TVDB est optionnel
+
+        except ImportError as e:
+            # Module tvdb_api non installé
+            logger.warning(f"Module tvdb_api non disponible: {e}")
+            if console:
+                console.print_warning("Module tvdb_api non installé")
             # Ne pas retourner False - TVDB est optionnel
 
     return True

@@ -226,7 +226,7 @@ def validate_directories(
 
 def _resolve_path(path_str: str, param_name: str) -> Path:
     """
-    Résout un chemin en chemin absolu.
+    Résout un chemin en chemin absolu avec validation.
 
     Args:
         path_str: Chaîne représentant le chemin.
@@ -236,10 +236,23 @@ def _resolve_path(path_str: str, param_name: str) -> Path:
         Chemin absolu résolu.
 
     Raises:
-        ValueError: Si le chemin est invalide.
+        ValueError: Si le chemin est invalide ou dangereux.
     """
+    # Chemins système dangereux à éviter
+    DANGEROUS_PATHS = {'/', '/usr', '/bin', '/sbin', '/etc', '/var', '/tmp', '/root'}
+
     try:
         path = Path(path_str).expanduser().resolve()
+
+        # Vérifier que le chemin n'est pas un répertoire système critique
+        path_str_resolved = str(path)
+        if path_str_resolved in DANGEROUS_PATHS:
+            raise ValueError(f"Chemin système critique interdit pour {param_name}: {path}")
+
+        # Vérifier que le chemin a au moins 2 niveaux de profondeur
+        if len(path.parts) < 3 and path_str_resolved != str(Path.home()):
+            logger.warning(f"Chemin très court pour {param_name}: {path} - vérifiez que c'est intentionnel")
+
         return path
     except (OSError, ValueError) as e:
         raise ValueError(f"Chemin invalide pour {param_name}: {path_str} ({e})")

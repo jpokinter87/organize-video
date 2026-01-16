@@ -5,14 +5,12 @@ from pathlib import Path
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from loguru import logger
-from rich.console import Console
 from tqdm import tqdm
+
+from organize.ui.console import console
 
 if TYPE_CHECKING:
     from organize.models.video import Video
-
-# Console pour l'affichage
-console = Console()
 
 
 def format_season_folder(season: int) -> str:

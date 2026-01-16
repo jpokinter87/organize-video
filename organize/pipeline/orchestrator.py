@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from loguru import logger
 from tqdm import tqdm
@@ -115,16 +115,32 @@ class PipelineOrchestrator:
     def _process_single_video(
         self,
         video: Video,
-        rename_video_fn,
-        move_file_fn,
-        process_video_fn,
-        set_fr_title_fn,
-        find_directory_fn,
-        find_symlink_fn,
-        media_info_fn,
-        format_undetected_fn,
+        rename_video_fn: Callable[..., None],
+        move_file_fn: Callable[..., None],
+        process_video_fn: Callable[..., Optional[Video]],
+        set_fr_title_fn: Callable[[Video], Video],
+        find_directory_fn: Callable[..., Path],
+        find_symlink_fn: Callable[..., Path],
+        media_info_fn: Callable[[Path], str],
+        format_undetected_fn: Callable[[Video], str],
     ) -> None:
-        """Traite une vidéo unique à travers le pipeline."""
+        """
+        Traite une vidéo unique à travers le pipeline.
+
+        Gère le workflow complet pour une vidéo : recherche de métadonnées,
+        détection de doublons, renommage et déplacement vers le stockage final.
+
+        Args:
+            video: Objet Video à traiter.
+            rename_video_fn: Fonction de renommage du fichier vidéo.
+            move_file_fn: Fonction de déplacement vers le stockage final.
+            process_video_fn: Fonction de traitement des doublons.
+            set_fr_title_fn: Fonction de récupération du titre français via API.
+            find_directory_fn: Fonction de recherche du répertoire de destination.
+            find_symlink_fn: Fonction de recherche du chemin pour les symlinks.
+            media_info_fn: Fonction d'extraction des informations techniques.
+            format_undetected_fn: Fonction de formatage pour les vidéos non détectées.
+        """
         ctx = self.context
 
         # Traiter les documentaires (chemin simplifié)
@@ -172,19 +188,34 @@ class PipelineOrchestrator:
     def _process_new_video(
         self,
         video: Video,
-        set_fr_title_fn,
-        find_directory_fn,
-        find_symlink_fn,
-        media_info_fn,
-        format_undetected_fn,
+        set_fr_title_fn: Callable[[Video], Video],
+        find_directory_fn: Callable[..., Path],
+        find_symlink_fn: Callable[..., Path],
+        media_info_fn: Callable[[Path], str],
+        format_undetected_fn: Callable[[Video], str],
     ) -> None:
-        """Traite une vidéo qui n'est pas dans le cache."""
+        """
+        Traite une vidéo qui n'est pas dans le cache.
+
+        Recherche les métadonnées via l'API TMDB, détermine le genre et le
+        répertoire de destination, puis met en cache les informations pour
+        les vidéos similaires.
+
+        Args:
+            video: Objet Video à traiter.
+            set_fr_title_fn: Fonction de récupération du titre français via API.
+            find_directory_fn: Fonction de recherche du répertoire de destination.
+            find_symlink_fn: Fonction de recherche du chemin pour les symlinks.
+            media_info_fn: Fonction d'extraction des informations techniques.
+            format_undetected_fn: Fonction de formatage pour les vidéos non détectées.
+        """
         ctx = self.context
         original_spec = video.spec
         video = set_fr_title_fn(video)
 
         # Gestion des films non détectés
-        if (not video.title_fr or video.title_fr.strip() == '') and video.is_film_anim():
+        title_is_empty = not video.title_fr or not video.title_fr.strip()
+        if title_is_empty and video.is_film_anim():
             video.title_fr = ""
             video.date_film = 0
             video.genre = GENRE_UNDETECTED

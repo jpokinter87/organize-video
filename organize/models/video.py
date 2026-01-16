@@ -1,11 +1,24 @@
 """Video data model for the organize package."""
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
 from organize.config.settings import FILMANIM, FILMSERIE, NOT_DOC
 from organize.classification.text_processing import normalize, remove_article
+
+# Patterns regex pré-compilés pour l'extraction de métadonnées
+_TECH_PATTERNS = [
+    re.compile(r'\b\d{4}\b', re.IGNORECASE),
+    re.compile(r'\b(MULTI|MULTi|VF|VOSTFR|FR|VO|FRENCH)\b', re.IGNORECASE),
+    re.compile(r'\b(x264|x265|HEVC|H264|H265|AV1)\b', re.IGNORECASE),
+    re.compile(r'\b(1080p|720p|480p|2160p)\b', re.IGNORECASE),
+    re.compile(r'\b(WEB|BluRay|BDRip|DVDRip|WEBRip)\b', re.IGNORECASE),
+]
+_SEPARATOR_PATTERN = re.compile(r'[._-]+')
+_WHITESPACE_PATTERN = re.compile(r'\s+')
+_YEAR_PATTERN = re.compile(r'\b(19|20)\d{2}\b')
 
 
 @dataclass
@@ -59,7 +72,8 @@ class Video:
             Formatted filename with title, year, specs, and extension.
         """
         # Gérer les fichiers non détectés
-        if not title or title.strip() == '' or not self.title_fr:
+        title_is_empty = not title or not title.strip()
+        if title_is_empty or not self.title_fr:
             return self._format_undetected_filename()
 
         if self.is_serie():
@@ -81,29 +95,19 @@ class Video:
         This is a simplified version - the full implementation is in
         the classification module.
         """
-        import re
-
         original_name = self.complete_path_original.stem
 
-        # Nettoyage de base
+        # Nettoyage de base avec patterns pré-compilés
         cleaned_title = original_name
-        tech_patterns = [
-            r'\b\d{4}\b',
-            r'\b(MULTI|MULTi|VF|VOSTFR|FR|VO|FRENCH)\b',
-            r'\b(x264|x265|HEVC|H264|H265|AV1)\b',
-            r'\b(1080p|720p|480p|2160p)\b',
-            r'\b(WEB|BluRay|BDRip|DVDRip|WEBRip)\b',
-        ]
+        for pattern in _TECH_PATTERNS:
+            cleaned_title = pattern.sub('', cleaned_title)
 
-        for pattern in tech_patterns:
-            cleaned_title = re.sub(pattern, '', cleaned_title, flags=re.IGNORECASE)
-
-        cleaned_title = re.sub(r'[._-]+', ' ', cleaned_title)
-        cleaned_title = re.sub(r'\s+', ' ', cleaned_title).strip()
+        cleaned_title = _SEPARATOR_PATTERN.sub(' ', cleaned_title)
+        cleaned_title = _WHITESPACE_PATTERN.sub(' ', cleaned_title).strip()
         cleaned_title = cleaned_title.title() if cleaned_title else "Fichier non identifié"
 
         # Extraire l'année
-        year_match = re.search(r'\b(19|20)\d{2}\b', original_name)
+        year_match = _YEAR_PATTERN.search(original_name)
         year = year_match.group() if year_match else "Année inconnue"
 
         # Construire les specs

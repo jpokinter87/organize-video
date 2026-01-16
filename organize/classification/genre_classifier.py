@@ -121,7 +121,7 @@ def classify_animation(video: "Video") -> "Video":
     else:
         # Choix automatique basé sur les défauts
         video.genre = 'Animation/Animation Enfant'
-        logger.info(f"Genre animation automatiquement sélectionné : {video.genre}")
+        logger.debug(f"Genre animation automatiquement sélectionné : {video.genre}")
 
     video.list_genres = [video.genre if x == 'Animation' else x for x in video.list_genres]
     return video
@@ -156,7 +156,7 @@ def handle_unsupported_genres(video: "Video", detected_genres: List[str]) -> "Vi
         # Tous les genres sont non supportés - essayer de mapper
         suggested = suggest_genre_mapping(unsupported_genres)
         if suggested:
-            logger.info(f"Genre non supporté '{unsupported_genres}' mappé vers '{suggested}'")
+            logger.debug(f"Genre non supporté '{unsupported_genres}' mappé vers '{suggested}'")
             video.list_genres = [suggested]
         else:
             logger.warning(f"Genres non supportés sans mapping : {unsupported_genres}")

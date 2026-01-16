@@ -5,17 +5,13 @@ from pathlib import Path
 from typing import List, Tuple, Union, TYPE_CHECKING
 
 from loguru import logger
-from rich.console import Console
-from rich.panel import Panel
 
 from organize.api.exceptions import APIConfigurationError, APIConnectionError
 from organize.config import FILMANIM, GENRES, GENRE_UNDETECTED
+from organize.ui.console import console
 
 if TYPE_CHECKING:
     from organize.models.video import Video
-
-# Console pour l'affichage
-console = Console()
 
 
 def _get_release_date(movie: dict) -> int:
@@ -63,15 +59,12 @@ def query_movie_database(
     Returns:
         Tuple (nom français, liste des genres, année).
     """
+    # Imports locaux pour éviter les imports circulaires et faciliter les mocks
     from organize.api import CacheDB, Tmdb
     from organize.ui.interactive import (
-        launch_video_player,
-        wait_for_user_after_viewing,
-        choose_genre_manually,
         user_confirms_match,
         handle_not_found_error,
     )
-    from organize.classification.text_processing import extract_title_from_filename
 
     TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
 
@@ -87,7 +80,7 @@ def query_movie_database(
         if cached_data:
             json_data = cached_data
         else:
-            base = Tmdb()
+            base = Tmdb(api_key=TMDB_API_KEY)
             json_data = base.find_content(name, type_video)
             if json_data is None:
                 logger.error("Impossible de se connecter à l'API TMDB.")

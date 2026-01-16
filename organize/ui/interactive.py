@@ -17,7 +17,59 @@ from organize.ui.confirmations import (
     parse_user_response,
     get_available_genres,
 )
-from organize.config import FILMANIM, VIDEO_PLAYERS, GENRE_UNDETECTED
+from organize.config import FILMANIM, VIDEO_PLAYERS, GENRE_UNDETECTED, EXT_VIDEO
+
+
+def _validate_video_path(video_path: Path) -> bool:
+    """
+    Valide qu'un chemin vidéo est sûr pour le lancement dans un lecteur.
+
+    Vérifie:
+    - Le fichier existe
+    - C'est un fichier (pas un répertoire)
+    - L'extension est une extension vidéo valide
+    - Le chemin résolu ne pointe pas vers des zones système critiques
+
+    Args:
+        video_path: Chemin du fichier vidéo à valider.
+
+    Returns:
+        True si le chemin est valide et sûr, False sinon.
+    """
+    # Zones système critiques à éviter
+    forbidden_prefixes = {'/bin', '/sbin', '/usr', '/etc', '/boot', '/lib', '/proc', '/sys'}
+
+    try:
+        # Vérifier que le fichier existe
+        if not video_path.exists():
+            logger.warning(f"Fichier vidéo inexistant: {video_path}")
+            return False
+
+        # Vérifier que c'est un fichier (pas un répertoire)
+        if not video_path.is_file():
+            logger.warning(f"Le chemin n'est pas un fichier: {video_path}")
+            return False
+
+        # Vérifier l'extension
+        extension = video_path.suffix.lower()
+        if extension not in EXT_VIDEO:
+            logger.warning(f"Extension non vidéo: {extension} pour {video_path}")
+            return False
+
+        # Résoudre le chemin (suivre les symlinks) et vérifier les zones interdites
+        resolved = video_path.resolve()
+        resolved_str = str(resolved)
+
+        for prefix in forbidden_prefixes:
+            if resolved_str.startswith(prefix + '/') or resolved_str == prefix:
+                logger.warning(f"Chemin vidéo dans zone système interdite: {resolved}")
+                return False
+
+        return True
+
+    except (OSError, ValueError) as e:
+        logger.warning(f"Erreur lors de la validation du chemin vidéo: {e}")
+        return False
 
 
 def launch_video_player(video_path: Path) -> bool:
@@ -25,7 +77,8 @@ def launch_video_player(video_path: Path) -> bool:
     Lance le lecteur vidéo par défaut pour visualiser le fichier.
 
     Détecte automatiquement le système d'exploitation et trouve
-    le lecteur vidéo disponible.
+    le lecteur vidéo disponible. Inclut une validation de sécurité
+    du chemin avant le lancement.
 
     Args:
         video_path: Chemin vers le fichier vidéo à lire.
@@ -33,6 +86,11 @@ def launch_video_player(video_path: Path) -> bool:
     Returns:
         True si le lancement réussit, False sinon.
     """
+    # Validation de sécurité du chemin vidéo
+    if not _validate_video_path(video_path):
+        console.print("[red]Chemin vidéo invalide ou non sécurisé[/red]")
+        return False
+
     try:
         # Détection du système et des lecteurs disponibles
         video_players = []

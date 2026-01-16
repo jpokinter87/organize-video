@@ -12,11 +12,17 @@ import sys
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from dotenv import load_dotenv
 from loguru import logger
+
+# Charger les variables d'environnement depuis .env à la racine du projet
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=_env_path)
 
 from organize.config import CLIArgs, ConfigurationManager
 from organize.config.manager import ValidationResult
 from organize.ui import ConsoleUI
+from organize.ui.display import generate_tree_structure, display_tree
 from organize.pipeline import (
     PipelineContext,
     PipelineOrchestrator,
@@ -97,6 +103,34 @@ def display_statistics(stats: ProcessingStats, dry_run: bool, console: ConsoleUI
 
     if dry_run:
         console.print("\n[yellow]Mode simulation - aucune modification effectuee[/yellow]")
+
+
+def display_dry_run_tree(videos: List[Video], console: ConsoleUI) -> None:
+    """
+    Affiche l'arborescence des fichiers qui auraient été créés en mode simulation.
+
+    Args:
+        videos: Liste des objets Video traités.
+        console: Instance ConsoleUI pour l'affichage.
+    """
+    # Filtrer les vidéos avec un nom formaté
+    videos_with_paths = [v for v in videos if v.formatted_filename]
+
+    if not videos_with_paths:
+        console.print("[dim]Aucun fichier à afficher dans l'arborescence[/dim]")
+        return
+
+    console.print("\n")
+    console.print_panel(
+        "[bold]Arborescence des fichiers qui auraient été créés[/bold]\n"
+        "[dim]Cette structure montre l'organisation finale des symlinks[/dim]",
+        title="Structure de destination (simulation)",
+        border_style="blue"
+    )
+
+    # Générer et afficher l'arborescence
+    tree_structure = generate_tree_structure(videos_with_paths)
+    display_tree(tree_structure, max_files_per_folder=10)
 
 
 # ============================================================================
@@ -409,6 +443,10 @@ def main(args: Optional[List[str]] = None) -> int:
         # Afficher les statistiques
         display_statistics(stats, cli_args.dry_run, console)
 
+        # En mode dry-run, afficher l'arborescence des fichiers
+        if cli_args.dry_run:
+            display_dry_run_tree(list_of_videos, console)
+
         logger.info(f"Traitement termine: {stats.total} videos traitees")
         return 0
 
@@ -421,6 +459,19 @@ def main(args: Optional[List[str]] = None) -> int:
         # OSError inclut FileNotFoundError, PermissionError, etc.
         logger.error(f"Erreur systeme: {e}")
         console.print(f"[red]Erreur systeme: {e}[/red]")
+        return 1
+
+    except ValueError as e:
+        # Erreurs de configuration ou de validation
+        logger.error(f"Erreur de configuration: {e}")
+        console.print(f"[red]Erreur de configuration: {e}[/red]")
+        return 1
+
+    except (AttributeError, TypeError) as e:
+        # Erreurs inattendues dans le code
+        logger.error(f"Erreur inattendue: {e}")
+        logger.opt(exception=True).debug("Traceback complet")
+        console.print(f"[red]Erreur inattendue: {e}[/red]")
         return 1
 
 

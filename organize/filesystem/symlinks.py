@@ -1,22 +1,98 @@
 """Symlink operations for video organization."""
 
 from pathlib import Path
+from typing import Optional, Set
 
 from loguru import logger
 
+# Répertoires système critiques où les symlinks ne doivent jamais pointer
+_FORBIDDEN_PATHS: Set[str] = {
+    '/', '/bin', '/sbin', '/usr', '/etc', '/var', '/root',
+    '/boot', '/lib', '/lib64', '/proc', '/sys', '/dev'
+}
 
-def create_symlink(source: Path, destination: Path, dry_run: bool = False) -> None:
+
+def _is_path_safe(path: Path, context: str = "path") -> bool:
+    """
+    Vérifie qu'un chemin est sûr pour les opérations de symlink.
+
+    Détecte les tentatives d'échappement de répertoire et les chemins
+    vers des zones système critiques.
+
+    Args:
+        path: Chemin à vérifier.
+        context: Description du contexte pour les logs (source/destination).
+
+    Returns:
+        True si le chemin est sûr, False sinon.
+    """
+    try:
+        # Résoudre le chemin pour détecter les traversées (..)
+        resolved = path.resolve()
+        resolved_str = str(resolved)
+
+        # Vérifier que le chemin ne pointe pas vers un répertoire système critique
+        for forbidden in _FORBIDDEN_PATHS:
+            if resolved_str == forbidden or resolved_str.startswith(forbidden + '/'):
+                # Exception: permettre /var/log, /var/tmp, etc. pour les fichiers normaux
+                if forbidden == '/var' and any(
+                    resolved_str.startswith(f'/var/{allowed}')
+                    for allowed in ['log', 'tmp', 'cache']
+                ):
+                    continue
+                logger.warning(
+                    f"Chemin {context} interdit (zone système): {resolved}"
+                )
+                return False
+
+        # Vérifier la présence de patterns suspects dans le chemin original
+        path_str = str(path)
+        if '..' in path_str:
+            logger.warning(
+                f"Chemin {context} suspect (traversée de répertoire): {path}"
+            )
+            return False
+
+        return True
+
+    except (OSError, ValueError) as e:
+        logger.warning(f"Impossible de valider le chemin {context}: {path} ({e})")
+        return False
+
+
+def create_symlink(
+    source: Path,
+    destination: Path,
+    dry_run: bool = False,
+    skip_validation: bool = False
+) -> Optional[bool]:
     """
     Create a symbolic link (or simulate if dry_run).
+
+    Includes security validation to prevent symlink escape attacks
+    (creating symlinks to/from system directories).
 
     Args:
         source: Source file path.
         destination: Destination symlink path.
         dry_run: If True, only simulate the operation.
+        skip_validation: If True, skip security validation (for tests only).
+
+    Returns:
+        True if successful, False if validation failed, None on error.
     """
+    # Validation de sécurité des chemins
+    if not skip_validation:
+        if not _is_path_safe(source, "source"):
+            logger.error(f"Création de symlink refusée: source non sécurisée {source}")
+            return False
+        if not _is_path_safe(destination, "destination"):
+            logger.error(f"Création de symlink refusée: destination non sécurisée {destination}")
+            return False
+
     if dry_run:
         logger.debug(f'SIMULATION - Symlink: {source} -> {destination}')
-        return
+        return True
 
     try:
         # Résoudre la source si c'est déjà un symlink
@@ -29,9 +105,11 @@ def create_symlink(source: Path, destination: Path, dry_run: bool = False) -> No
 
         destination.symlink_to(source)
         logger.debug(f'Symlink created: {source} -> {destination}')
+        return True
 
     except OSError as e:
         logger.warning(f"Erreur lors de la création du symlink {source} -> {destination}: {e}")
+        return None
 
 
 def verify_symlinks(directory: Path) -> None:
