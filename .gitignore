@@ -51,6 +51,9 @@ Thumbs.db
 last_exec_video
 last_exec_video.lock
 last_exec_video.tmp
+.env
+.env.example
+test_videos/
 web/db.sqlite3
 web/*.sqlite3
 
