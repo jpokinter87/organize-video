@@ -111,21 +111,23 @@ def process_single_video(args: Tuple[Path, Path, Path, bool, bool]) -> Optional[
         video.type_file = type_of_video(file)
         video.extended_sub = Path(video.type_file) / "Séries TV" if video.is_serie() else Path("")
 
-        # Vérification des doublons seulement si pas en mode force
-        if not force_mode and not dry_run:
+        # Vérification des doublons seulement si pas en mode force et hash valide
+        if not force_mode and not dry_run and video.hash is not None:
             video_db = select_db(file, storage_dir)
             if hash_exists_in_db(video_db, video.hash):
                 logger.info(f"Hash de {file.name} déjà présent dans {video_db.name}")
                 return None
         elif dry_run:
             logger.debug(f"SIMULATION - Vérification hash ignorée pour {file.name}")
+        elif video.hash is None:
+            logger.warning(f"Hash invalide pour {file.name}, traitement sans vérification de doublon")
 
         # Extraction des informations
         video.title, video.date_film, video.sequence, video.season, video.episode, video.spec = extract_file_infos(
             video)
 
-        # Ajout à la base de données seulement si pas en mode force ou dry_run
-        if not force_mode and not dry_run:
+        # Ajout à la base de données seulement si pas en mode force ou dry_run et hash valide
+        if not force_mode and not dry_run and video.hash is not None:
             add_hash_to_db(file, video.hash, storage_dir)
         elif dry_run:
             logger.debug(f"SIMULATION - Ajout hash ignoré pour {file.name}")

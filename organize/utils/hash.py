@@ -2,6 +2,8 @@
 
 import hashlib
 from pathlib import Path
+from typing import Optional
+
 from loguru import logger
 
 
@@ -12,7 +14,7 @@ SMALL_FILE_THRESHOLD = 650000
 PARTIAL_HASH_CHUNK_SIZE = 524288
 
 
-def checksum_md5(filename: Path) -> str:
+def checksum_md5(filename: Path) -> Optional[str]:
     """
     Calculate MD5 hash of a file.
 
@@ -25,13 +27,14 @@ def checksum_md5(filename: Path) -> str:
         filename: Path to the file to hash.
 
     Returns:
-        MD5 hex digest string, or 'no_md5_hash' if file doesn't exist
+        MD5 hex digest string, or None if file doesn't exist
         or an error occurs.
     """
     if not filename.exists():
-        return 'no_md5_hash'
+        return None
 
-    md5 = hashlib.md5()
+    # usedforsecurity=False for FIPS compliance (MD5 used for dedup, not crypto)
+    md5 = hashlib.md5(usedforsecurity=False)
     try:
         with open(filename, 'rb') as f:
             size = filename.stat().st_size
@@ -44,4 +47,4 @@ def checksum_md5(filename: Path) -> str:
         return md5.hexdigest()
     except (OSError, IOError) as e:
         logger.debug(f'Erreur I/O lors du calcul MD5 de {filename}: {e}')
-        return 'no_md5_hash'
+        return None

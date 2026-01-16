@@ -61,7 +61,7 @@ def create_video_from_file(file_path: Path) -> Video:
 
 
 def should_skip_duplicate(
-    hash_value: str,
+    hash_value: Optional[str],
     force_mode: bool,
     dry_run: bool,
     hash_exists_fn: Callable[[str], bool]
@@ -70,7 +70,7 @@ def should_skip_duplicate(
     Check if video should be skipped due to being a duplicate.
 
     Args:
-        hash_value: MD5 hash of the video file.
+        hash_value: MD5 hash of the video file, or None if hashing failed.
         force_mode: If True, never skip duplicates.
         dry_run: If True, don't check for duplicates.
         hash_exists_fn: Function to check if hash exists in database.
@@ -81,12 +81,17 @@ def should_skip_duplicate(
     # Never skip in force mode or dry run
     if force_mode or dry_run:
         if dry_run:
-            logger.debug(f"SIMULATION - Hash check skipped")
+            logger.debug("SIMULATION - Hash check skipped")
+        return False
+
+    # Can't check duplicates without a hash
+    if hash_value is None:
+        logger.warning("Cannot check for duplicates: hash computation failed")
         return False
 
     # Check if hash exists
     if hash_exists_fn(hash_value):
-        logger.info(f"Hash already exists in database")
+        logger.info("Hash already exists in database")
         return True
 
     return False
@@ -143,7 +148,7 @@ def process_single_video_file(
         video = create_video_from_file(file_path)
 
         # Check for duplicates
-        if hash_exists_fn is not None:
+        if hash_exists_fn is not None and video.hash is not None:
             if should_skip_duplicate(video.hash, force_mode, dry_run, hash_exists_fn):
                 return VideoProcessingResult(
                     success=True,
@@ -155,7 +160,7 @@ def process_single_video_file(
         video = process_video_metadata(video)
 
         # Add hash to database if not dry run
-        if add_hash_fn is not None and not dry_run and not force_mode:
+        if add_hash_fn is not None and video.hash is not None and not dry_run and not force_mode:
             add_hash_fn(video.hash)
         elif dry_run:
             logger.debug(f"SIMULATION - Hash add skipped for {file_path.name}")

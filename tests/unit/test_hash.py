@@ -9,9 +9,9 @@ class TestChecksumMd5:
     """Tests for the checksum_md5() function."""
 
     def test_checksum_nonexistent_file(self, tmp_path):
-        """Returns 'no_md5_hash' for nonexistent file."""
+        """Returns None for nonexistent file."""
         nonexistent = tmp_path / "nonexistent.mkv"
-        assert checksum_md5(nonexistent) == 'no_md5_hash'
+        assert checksum_md5(nonexistent) is None
 
     def test_checksum_small_file(self, tmp_path):
         """Small files (<650KB) are fully hashed."""
@@ -19,7 +19,7 @@ class TestChecksumMd5:
         small_file.write_bytes(b"test content")
 
         result = checksum_md5(small_file)
-        assert result != 'no_md5_hash'
+        assert result is not None
         assert len(result) == 32  # MD5 hex digest is 32 chars
 
     def test_checksum_large_file(self, tmp_path):
@@ -29,7 +29,7 @@ class TestChecksumMd5:
         large_file.write_bytes(b"x" * 700000)
 
         result = checksum_md5(large_file)
-        assert result != 'no_md5_hash'
+        assert result is not None
         assert len(result) == 32
 
     def test_checksum_consistency(self, tmp_path):
@@ -58,5 +58,5 @@ class TestChecksumMd5:
         empty_file.write_bytes(b"")
 
         result = checksum_md5(empty_file)
-        assert result != 'no_md5_hash'
+        assert result is not None
         assert len(result) == 32
