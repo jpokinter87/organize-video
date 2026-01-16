@@ -28,6 +28,10 @@ from organize.config.cli import (
     validate_directories,
     args_to_cli_args,
 )
+from organize.config.manager import (
+    ConfigurationManager,
+    ValidationResult,
+)
 
 __all__ = [
     "EXT_VIDEO",
@@ -52,4 +56,6 @@ __all__ = [
     "parse_arguments",
     "validate_directories",
     "args_to_cli_args",
+    "ConfigurationManager",
+    "ValidationResult",
 ]

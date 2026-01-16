@@ -13,69 +13,19 @@ from pathlib import Path
 
 from loguru import logger
 
-# ============================================================================
-# MODULAR IMPORTS (All Components)
-# ============================================================================
-from organize.config import (
-    CLIArgs,
-    parse_arguments,
-    args_to_cli_args,
-    validate_directories,
-    CATEGORIES,
-    PROCESS_ALL_FILES_DAYS,
-)
-from organize.models import Video
-from organize.api import CacheDB, validate_api_keys, test_api_connectivity
-from organize.classification import media_info, format_undetected_filename
-from organize.filesystem import (
-    get_available_categories,
-    count_videos,
-    copy_tree,
-    verify_symlinks,
-    setup_working_directories,
-    find_directory_for_video,
-    find_symlink_and_sub_dir,
-    find_similar_file,
-    aplatir_repertoire_series,
-    rename_video,
-    move_file_new_nas,
-    cleanup_directories,
-    cleanup_work_directory,
-)
+from organize.config import CLIArgs, ConfigurationManager
 from organize.ui import ConsoleUI
 from organize.pipeline import (
+    PipelineContext,
+    PipelineOrchestrator,
     create_video_list,
-    process_video,
-    add_episodes_titles,
-    set_fr_title_and_category,
 )
+from organize.filesystem import copy_tree
+
 
 # ============================================================================
-# HELPER FUNCTIONS
+# UI HELPER FUNCTIONS
 # ============================================================================
-
-def setup_logging(debug: bool = False) -> None:
-    """
-    Configure logging with loguru.
-
-    Args:
-        debug: Enable debug level logging if True.
-    """
-    logger.remove()
-
-    # File logging
-    logger.add(
-        "organize.log",
-        rotation="100 MB",
-        level="DEBUG" if debug else "INFO"
-    )
-
-    # Console logging
-    logger.add(
-        sys.stderr,
-        level="DEBUG" if debug else "WARNING"
-    )
-
 
 def display_configuration(cli_args: CLIArgs, console: ConsoleUI) -> None:
     """
@@ -125,6 +75,25 @@ def display_simulation_banner(console: ConsoleUI) -> None:
     )
 
 
+def display_statistics(stats, dry_run: bool, console: ConsoleUI) -> None:
+    """Display processing statistics."""
+    console.print("\n")
+    console.print_panel(
+        f"[bold]Statistiques de traitement[/bold]\n\n"
+        f"Films: [cyan]{stats.films}[/cyan]\n"
+        f"Series: [cyan]{stats.series}[/cyan]\n"
+        f"Animation: [cyan]{stats.animation}[/cyan]\n"
+        f"Documentaires: [cyan]{stats.docs}[/cyan]\n"
+        f"Non detectes: [yellow]{stats.undetected}[/yellow]\n\n"
+        f"Total traite: [green]{stats.total}[/green]",
+        title="Resume",
+        border_style="green" if not dry_run else "yellow"
+    )
+
+    if dry_run:
+        console.print("\n[yellow]Mode simulation - aucune modification effectuee[/yellow]")
+
+
 # ============================================================================
 # LEGACY MODE SUPPORT
 # ============================================================================
@@ -162,7 +131,7 @@ def run_legacy_mode() -> int:
     except KeyboardInterrupt:
         console.print("\n[yellow]Interruption par l'utilisateur[/yellow]")
         return 130
-    except Exception as e:
+    except (OSError, ImportError, AttributeError) as e:
         logger.error(f"Legacy mode error: {e}")
         console.print(f"[red]Erreur mode legacy: {e}[/red]")
         return 1
@@ -182,7 +151,7 @@ def main() -> int:
     Main entry point for the video organization tool.
 
     Supports two modes:
-    - Modern mode (default): Uses modular components with gap imports
+    - Modern mode (default): Uses modular components
     - Legacy mode (--legacy): Delegates entirely to organize.py
 
     Returns:
@@ -194,70 +163,61 @@ def main() -> int:
         sys.argv = [arg for arg in sys.argv if arg != "--legacy"]
         return run_legacy_mode()
 
+    console = ConsoleUI()
+    config_manager = ConfigurationManager()
+
     try:
-        # Parse arguments using modular parser
-        namespace = parse_arguments()
-        cli_args = args_to_cli_args(namespace)
+        # Parse and validate configuration
+        cli_args = config_manager.parse_args()
+        config_manager.setup_logging(debug=cli_args.debug)
 
-        # Setup logging
-        setup_logging(debug=cli_args.debug)
-
-        # Validate input directory
-        if not cli_args.search_dir.exists():
-            logger.error(f"Input directory {cli_args.search_dir} does not exist")
-            return 1
-
-        # Create console UI
-        console = ConsoleUI()
-
-        # Display simulation banner if needed
+        # Display banners
         if cli_args.dry_run:
             display_simulation_banner(console)
-
-        # Display configuration
         display_configuration(cli_args, console)
 
-        # Validate API keys [MODULAR]
-        if not validate_api_keys():
-            console.print("[red]Erreur: Cles API manquantes (TMDB_API_KEY, TVDB_API_KEY)[/red]")
+        # Validate configuration
+        validation = config_manager.validate_input_directory()
+        if not validation.valid:
+            console.print(f"[red]Erreur: {validation.error_message}[/red]")
             return 1
 
-        # Test API connectivity [MODULAR]
-        if not test_api_connectivity():
-            console.print("[red]Erreur: Impossible de se connecter aux APIs[/red]")
+        validation = config_manager.validate_api_keys()
+        if not validation.valid:
+            console.print(f"[red]Erreur: {validation.error_message}[/red]")
             return 1
 
-        # Setup working directories [MODULAR]
-        work_dir, temp_dir, original_dir, waiting_folder = setup_working_directories(
-            cli_args.output_dir,
-            cli_args.dry_run
-        )
+        validation = config_manager.validate_api_connectivity()
+        if not validation.valid:
+            console.print(f"[red]Erreur: {validation.error_message}[/red]")
+            return 1
 
-        # Validate category structure [MODULAR]
-        available_categories = get_available_categories(cli_args.search_dir)
-        if not available_categories:
-            console.print(f"[red]Aucune categorie trouvee dans {cli_args.search_dir}[/red]")
-            console.print(f"[yellow]Categories attendues: {', '.join(CATEGORIES)}[/yellow]")
+        cat_validation, available_categories = config_manager.validate_categories()
+        if not cat_validation.valid:
+            console.print(f"[red]{cat_validation.error_message}[/red]")
             return 1
 
         console.print(f"[green]Categories detectees: {', '.join([cat.name for cat in available_categories])}[/green]")
 
-        # Count videos [MODULAR]
-        nb_videos = count_videos(cli_args.search_dir)
+        # Count videos
+        nb_videos = config_manager.get_video_count()
         if nb_videos == 0:
             console.print("[yellow]Aucune video a traiter[/yellow]")
             return 0
 
         console.print(f"\n[bold green]{nb_videos} videos detectees[/bold green]")
 
-        # Flatten series directories [MODULAR]
+        # Flatten series directories
         if not cli_args.dry_run:
             console.print("[blue]Aplatissement des repertoires series...[/blue]")
-            aplatir_repertoire_series(cli_args.search_dir)
+            config_manager.flatten_series_directories()
         else:
             console.print("[dim]SIMULATION - Aplatissement des repertoires ignore[/dim]")
 
-        # Create video list [GAP]
+        # Setup working directories
+        work_dir, temp_dir, original_dir, waiting_folder = config_manager.setup_working_directories()
+
+        # Create video list
         console.print("[blue]Analyse et creation des liens temporaires...[/blue]")
         list_of_videos = create_video_list(
             cli_args.search_dir,
@@ -281,149 +241,61 @@ def main() -> int:
         # Save original links
         if not cli_args.dry_run:
             logger.info("Sauvegarde des liens vers les fichiers originaux")
+            from organize.filesystem import cleanup_directories
             copy_tree(temp_dir, original_dir, cli_args.dry_run)
             cleanup_directories(work_dir)
             work_dir.mkdir(exist_ok=True)
         else:
             console.print("[dim]SIMULATION - Sauvegarde et nettoyage ignores[/dim]")
 
-        # Main video processing loop [GAP functions]
+        # Create pipeline context and orchestrator
+        context = PipelineContext(
+            search_dir=cli_args.search_dir,
+            storage_dir=cli_args.storage_dir,
+            symlinks_dir=cli_args.symlinks_dir,
+            output_dir=cli_args.output_dir,
+            work_dir=work_dir,
+            temp_dir=temp_dir,
+            original_dir=original_dir,
+            waiting_folder=waiting_folder,
+            dry_run=cli_args.dry_run,
+            force_mode=cli_args.force_mode,
+            days_to_process=cli_args.days_to_process,
+        )
+        orchestrator = PipelineOrchestrator(context)
+
+        # Process videos
         console.print("[blue]Formatage des titres et organisation...[/blue]")
-        dict_titles = {}
+        stats = orchestrator.process_videos(list_of_videos)
 
-        from tqdm import tqdm
-        with tqdm(list_of_videos, desc="Traitement des videos", unit="fichier") as pbar:
-            for video in pbar:
-                pbar.set_postfix_str(f"{video.complete_path_original.name[:30]}...")
+        # Process series episode titles
+        if not cli_args.dry_run:
+            series_count = sum(1 for v in list_of_videos if v.is_serie() and v.title_fr)
+            if series_count > 0:
+                console.print(f"[blue]Recherche des titres d'episodes pour {series_count} series...[/blue]")
+        else:
+            console.print("[yellow]SIMULATION - Recherche des titres d'episodes...[/yellow]")
 
-                try:
-                    # Process documentaries (simple path)
-                    if video.type_file in {'Docs', 'Docs#1'}:
-                        rename_video(video, dict_titles, video.type_file, work_dir, cli_args.dry_run)
-                        move_file_new_nas(video, cli_args.storage_dir, cli_args.dry_run)
-                        continue
+        orchestrator.process_series_titles(list_of_videos)
 
-                    # Check cache for repeated titles
-                    cache_key = video.title
-                    if cache_key in dict_titles:
-                        (video.title_fr, video.date_film, video.genre,
-                         video.complete_dir_symlinks, video.sub_directory, cached_spec) = dict_titles[cache_key]
-
-                        if not video.spec or len(video.spec.split()) < 3:
-                            video.spec = cached_spec
-
-                        video.formatted_filename = video.format_name(video.title_fr)
-                        logger.info(f"{video.formatted_filename} ({video.genre}) - formate (depuis cache)")
-                    else:
-                        # Full API processing [GAP]
-                        original_spec = video.spec
-                        video = set_fr_title_and_category(video)
-
-                        # Handle undetected films
-                        if (not video.title_fr or video.title_fr.strip() == '') and video.is_film_anim():
-                            video.title_fr = ""
-                            video.date_film = 0
-                            video.genre = "Non detecte"
-                            video.list_genres = ["Non detecte"]
-                            video.spec = original_spec
-                            video.formatted_filename = format_undetected_filename(video)
-                            video.sub_directory = Path('Films/non detectes')
-                            video.complete_dir_symlinks = find_directory_for_video(
-                                video, cli_args.symlinks_dir / 'Films'
-                            )
-                        else:
-                            # Normal processing
-                            video.complete_dir_symlinks, video.sub_directory = find_symlink_and_sub_dir(
-                                video, cli_args.symlinks_dir
-                            )
-
-                            # Enhance specs if needed [GAP]
-                            if not video.spec or len(video.spec.split()) < 3:
-                                media_spec = media_info(video)
-                                if media_spec:
-                                    video.spec = media_spec
-
-                            video.formatted_filename = video.format_name(video.title_fr)
-
-                        # Cache results
-                        if video.title_fr and video.title:
-                            dict_titles[cache_key] = (
-                                video.title_fr, video.date_film, video.genre,
-                                video.complete_dir_symlinks, video.sub_directory, video.spec
-                            )
-
-                    # Process video for duplicates [GAP]
-                    processed_video = process_video(
-                        video, waiting_folder, cli_args.storage_dir, cli_args.symlinks_dir
-                    )
-                    if processed_video:
-                        rename_video(
-                            processed_video, dict_titles,
-                            str(processed_video.sub_directory), work_dir, cli_args.dry_run
-                        )
-                        move_file_new_nas(processed_video, cli_args.storage_dir, cli_args.dry_run)
-
-                except Exception as e:
-                    logger.error(f"Erreur lors du traitement de {video.complete_path_original.name}: {e}")
-                    continue
-
-        # Process series episode titles [GAP]
-        series_videos = [v for v in list_of_videos if v.is_serie() and v.title_fr]
-        if series_videos:
-            if not cli_args.dry_run:
-                console.print(f"[blue]Recherche des titres d'episodes pour {len(series_videos)} series...[/blue]")
-                cleanup_work_directory(work_dir)
-            else:
-                console.print(f"[yellow]SIMULATION - Recherche des titres d'episodes...[/yellow]")
-
-            add_episodes_titles(series_videos, work_dir / 'Series/Series TV', cli_args.dry_run)
-
-        # Final copy to destination [MODULAR]
-        if work_dir.exists() and any(work_dir.iterdir()):
-            console.print("[blue]Copie finale vers le repertoire de destination...[/blue]")
-            copy_tree(work_dir, cli_args.output_dir, cli_args.dry_run)
-
-            if not cli_args.dry_run:
-                console.print("[blue]Verification de l'integrite des liens symboliques...[/blue]")
-                verify_symlinks(cli_args.output_dir)
+        # Finalize
+        console.print("[blue]Copie finale vers le repertoire de destination...[/blue]")
+        orchestrator.finalize()
 
         # Display statistics
-        # Calculate statistics
-        films_count = sum(1 for v in list_of_videos if v.is_film())
-        series_count = sum(1 for v in list_of_videos if v.is_serie() and v.title_fr)
-        anim_count = sum(1 for v in list_of_videos if v.is_animation())
-        docs_count = sum(1 for v in list_of_videos if v.type_file in {'Docs', 'Docs#1'})
-        non_detectes = sum(1 for v in list_of_videos if v.is_film_anim() and (not v.title_fr or v.genre == "Non detecte"))
+        display_statistics(stats, cli_args.dry_run, console)
 
-        console.print("\n")
-        console.print_panel(
-            f"[bold]Statistiques de traitement[/bold]\n\n"
-            f"Films: [cyan]{films_count}[/cyan]\n"
-            f"Series: [cyan]{series_count}[/cyan]\n"
-            f"Animation: [cyan]{anim_count}[/cyan]\n"
-            f"Documentaires: [cyan]{docs_count}[/cyan]\n"
-            f"Non detectes: [yellow]{non_detectes}[/yellow]\n\n"
-            f"Total traite: [green]{len(list_of_videos)}[/green]",
-            title="Resume",
-            border_style="green" if not cli_args.dry_run else "yellow"
-        )
-
-        if cli_args.dry_run:
-            console.print("\n[yellow]Mode simulation - aucune modification effectuee[/yellow]")
-
-        logger.info(f"Traitement termine: {len(list_of_videos)} videos traitees")
+        logger.info(f"Traitement termine: {stats.total} videos traitees")
         return 0
 
     except KeyboardInterrupt:
         logger.info("Interruption par l'utilisateur")
-        print("\n[yellow]Interruption par l'utilisateur[/yellow]")
+        console.print("\n[yellow]Interruption par l'utilisateur[/yellow]")
         return 130
 
-    except Exception as e:
-        logger.error(f"Erreur fatale: {e}")
-        print(f"[red]Erreur fatale: {e}[/red]")
-        import traceback
-        traceback.print_exc()
+    except (OSError, IOError) as e:
+        logger.error(f"Erreur systeme: {e}")
+        console.print(f"[red]Erreur systeme: {e}[/red]")
         return 1
 
 

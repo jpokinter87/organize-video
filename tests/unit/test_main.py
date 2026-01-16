@@ -5,28 +5,56 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from organize.__main__ import (
-    setup_logging,
     display_configuration,
+    display_simulation_banner,
+    display_statistics,
     main,
 )
-from organize.config import CLIArgs, ExecutionContext
+from organize.config import CLIArgs, ConfigurationManager
+from organize.pipeline import ProcessingStats
 
 
-class TestSetupLogging:
-    """Tests for setup_logging function."""
+class TestConfigurationManager:
+    """Tests for ConfigurationManager class."""
 
     def test_setup_logging_default(self):
         """Sets up logging with default level."""
-        with patch("organize.__main__.logger") as mock_logger:
-            setup_logging(debug=False)
+        manager = ConfigurationManager()
+        with patch("organize.config.manager.logger") as mock_logger:
+            manager.setup_logging(debug=False)
             mock_logger.remove.assert_called_once()
             assert mock_logger.add.call_count == 2
 
     def test_setup_logging_debug(self):
         """Sets up logging with debug level."""
-        with patch("organize.__main__.logger") as mock_logger:
-            setup_logging(debug=True)
+        manager = ConfigurationManager()
+        with patch("organize.config.manager.logger") as mock_logger:
+            manager.setup_logging(debug=True)
             mock_logger.remove.assert_called_once()
+
+    def test_parse_args_returns_cli_args(self):
+        """parse_args returns CLIArgs instance."""
+        manager = ConfigurationManager()
+        args = manager.parse_args(["--dry-run"])
+        assert isinstance(args, CLIArgs)
+        assert args.dry_run is True
+
+    def test_validate_input_directory_missing(self, tmp_path):
+        """Returns invalid when directory doesn't exist."""
+        manager = ConfigurationManager()
+        manager.parse_args(["--input", str(tmp_path / "nonexistent")])
+        result = manager.validate_input_directory()
+        assert result.valid is False
+        assert "does not exist" in result.error_message
+
+    def test_validate_input_directory_exists(self, tmp_path):
+        """Returns valid when directory exists."""
+        input_dir = tmp_path / "input"
+        input_dir.mkdir()
+        manager = ConfigurationManager()
+        manager.parse_args(["--input", str(input_dir)])
+        result = manager.validate_input_directory()
+        assert result.valid is True
 
 
 class TestDisplayConfiguration:
@@ -106,12 +134,46 @@ class TestDisplayConfiguration:
         assert "Tous les fichiers" in call_args
 
 
+class TestDisplayStatistics:
+    """Tests for display_statistics function."""
+
+    def test_displays_stats(self):
+        """Displays processing statistics."""
+        stats = ProcessingStats(
+            films=5,
+            series=3,
+            animation=2,
+            docs=1,
+            undetected=0,
+            total=11
+        )
+        console = MagicMock()
+
+        display_statistics(stats, dry_run=False, console=console)
+
+        console.print_panel.assert_called_once()
+        call_args = console.print_panel.call_args[0][0]
+        assert "5" in call_args  # films count
+        assert "11" in call_args  # total
+
+    def test_displays_simulation_message(self):
+        """Displays simulation message in dry run mode."""
+        stats = ProcessingStats(total=5)
+        console = MagicMock()
+
+        display_statistics(stats, dry_run=True, console=console)
+
+        # Check that simulation message was printed
+        calls = [str(c) for c in console.print.call_args_list]
+        assert any("simulation" in c.lower() for c in calls)
+
+
 class TestMain:
     """Tests for main function."""
 
     def test_main_invalid_directory(self, tmp_path):
         """Returns error code for invalid directory."""
-        with patch("organize.__main__.parse_arguments") as mock_parse:
+        with patch("organize.config.manager.parse_arguments") as mock_parse:
             mock_parse.return_value = MagicMock(
                 all=False,
                 day=0,
@@ -119,6 +181,7 @@ class TestMain:
                 force=False,
                 debug=False,
                 tag="",
+                legacy=False,
                 input=str(tmp_path / "nonexistent"),
                 output=str(tmp_path / "output"),
                 symlinks=str(tmp_path / "symlinks"),
@@ -136,9 +199,9 @@ class TestMain:
         # Create required category subdirectory
         (input_dir / "Films").mkdir()
 
-        with patch("organize.__main__.parse_arguments") as mock_parse, \
-             patch("organize.__main__.validate_api_keys", return_value=True), \
-             patch("organize.__main__.test_api_connectivity", return_value=True):
+        with patch("organize.config.manager.parse_arguments") as mock_parse, \
+             patch("organize.api.validate_api_keys", return_value=True), \
+             patch("organize.api.test_api_connectivity", return_value=True):
             mock_parse.return_value = MagicMock(
                 all=False,
                 day=7,
@@ -146,6 +209,7 @@ class TestMain:
                 force=False,
                 debug=False,
                 tag="",
+                legacy=False,
                 input=str(input_dir),
                 output=str(tmp_path / "output"),
                 symlinks=str(tmp_path / "symlinks"),
@@ -164,9 +228,9 @@ class TestMain:
         # Create required category subdirectory
         (input_dir / "Films").mkdir()
 
-        with patch("organize.__main__.parse_arguments") as mock_parse, \
-             patch("organize.__main__.validate_api_keys", return_value=True), \
-             patch("organize.__main__.test_api_connectivity", return_value=True):
+        with patch("organize.config.manager.parse_arguments") as mock_parse, \
+             patch("organize.api.validate_api_keys", return_value=True), \
+             patch("organize.api.test_api_connectivity", return_value=True):
             mock_parse.return_value = MagicMock(
                 all=False,
                 day=7,
@@ -174,6 +238,7 @@ class TestMain:
                 force=False,
                 debug=True,
                 tag="test_tag",
+                legacy=False,
                 input=str(input_dir),
                 output=str(tmp_path / "output"),
                 symlinks=str(tmp_path / "symlinks"),
