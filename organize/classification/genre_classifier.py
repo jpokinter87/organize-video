@@ -125,3 +125,43 @@ def classify_animation(video: "Video") -> "Video":
 
     video.list_genres = [video.genre if x == 'Animation' else x for x in video.list_genres]
     return video
+
+
+def handle_unsupported_genres(video: "Video", detected_genres: List[str]) -> "Video":
+    """
+    Gère les genres non supportés en essayant de les mapper vers des genres supportés.
+
+    Si tous les genres détectés sont non supportés, tente de suggérer un mapping
+    automatique. Si aucun mapping n'est trouvé, marque le genre comme 'Non détecté'.
+
+    Args:
+        video: Objet Video à traiter.
+        detected_genres: Liste des genres détectés par l'API.
+
+    Returns:
+        Objet Video avec list_genres mis à jour.
+    """
+    from organize.config import GENRE_UNDETECTED
+
+    if not detected_genres:
+        video.list_genres = [GENRE_UNDETECTED]
+        return video
+
+    valid_genres, unsupported_genres = filter_supported_genres(detected_genres)
+
+    if valid_genres:
+        # On a au moins un genre supporté
+        video.list_genres = valid_genres
+    elif unsupported_genres:
+        # Tous les genres sont non supportés - essayer de mapper
+        suggested = suggest_genre_mapping(unsupported_genres)
+        if suggested:
+            logger.info(f"Genre non supporté '{unsupported_genres}' mappé vers '{suggested}'")
+            video.list_genres = [suggested]
+        else:
+            logger.warning(f"Genres non supportés sans mapping : {unsupported_genres}")
+            video.list_genres = [GENRE_UNDETECTED]
+    else:
+        video.list_genres = [GENRE_UNDETECTED]
+
+    return video
