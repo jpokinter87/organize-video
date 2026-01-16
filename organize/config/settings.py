@@ -127,6 +127,9 @@ MAX_CLEANUP_ITERATIONS: int = 10
 # Valeur sentinelle pour « traiter tous les fichiers »
 PROCESS_ALL_FILES_DAYS: float = 100000000.0
 
+# Seuil de vidéos pour activer le multiprocessing
+MULTIPROCESSING_VIDEO_THRESHOLD: int = 50
+
 # =============================================================================
 # CONSTANTES DE HACHAGE MD5
 # =============================================================================

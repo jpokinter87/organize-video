@@ -18,9 +18,11 @@ from organize.ui import ConsoleUI
 from organize.pipeline import (
     PipelineContext,
     PipelineOrchestrator,
+    ProcessingStats,
     create_video_list,
 )
 from organize.filesystem import copy_tree
+from organize.config.settings import MULTIPROCESSING_VIDEO_THRESHOLD
 
 
 # ============================================================================
@@ -75,7 +77,7 @@ def display_simulation_banner(console: ConsoleUI) -> None:
     )
 
 
-def display_statistics(stats, dry_run: bool, console: ConsoleUI) -> None:
+def display_statistics(stats: ProcessingStats, dry_run: bool, console: ConsoleUI) -> None:
     """Display processing statistics."""
     console.print("\n")
     console.print_panel(
@@ -226,7 +228,7 @@ def main() -> int:
             cli_args.storage_dir,
             cli_args.force_mode,
             cli_args.dry_run,
-            use_multiprocessing=(nb_videos > 50)
+            use_multiprocessing=(nb_videos > MULTIPROCESSING_VIDEO_THRESHOLD)
         )
 
         if not list_of_videos:
@@ -293,7 +295,8 @@ def main() -> int:
         console.print("\n[yellow]Interruption par l'utilisateur[/yellow]")
         return 130
 
-    except (OSError, IOError) as e:
+    except OSError as e:
+        # OSError inclut FileNotFoundError, PermissionError, etc.
         logger.error(f"Erreur systeme: {e}")
         console.print(f"[red]Erreur systeme: {e}[/red]")
         return 1

@@ -200,8 +200,8 @@ class TestMain:
         (input_dir / "Films").mkdir()
 
         with patch("organize.config.manager.parse_arguments") as mock_parse, \
-             patch("organize.api.validate_api_keys", return_value=True), \
-             patch("organize.api.test_api_connectivity", return_value=True):
+             patch("organize.config.manager.check_api_keys", return_value=True), \
+             patch("organize.config.manager.test_api_connectivity", return_value=True):
             mock_parse.return_value = MagicMock(
                 all=False,
                 day=7,
@@ -229,8 +229,8 @@ class TestMain:
         (input_dir / "Films").mkdir()
 
         with patch("organize.config.manager.parse_arguments") as mock_parse, \
-             patch("organize.api.validate_api_keys", return_value=True), \
-             patch("organize.api.test_api_connectivity", return_value=True):
+             patch("organize.config.manager.check_api_keys", return_value=True), \
+             patch("organize.config.manager.test_api_connectivity", return_value=True):
             mock_parse.return_value = MagicMock(
                 all=False,
                 day=7,
