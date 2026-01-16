@@ -129,7 +129,7 @@ class TestConfigurationManagerValidation:
             "--dry-run"
         ])
 
-        with patch("organize.api.validate_api_keys", return_value=False):
+        with patch("organize.config.manager.check_api_keys", return_value=False):
             result = manager.validate_all()
 
         assert result.valid is False
@@ -267,7 +267,7 @@ class TestAPIFailureHandling:
             "--dry-run"
         ])
 
-        with patch("organize.api.validate_api_keys", return_value=False):
+        with patch("organize.config.manager.check_api_keys", return_value=False):
             result = manager.validate_api_keys()
 
         assert result.valid is False
@@ -284,7 +284,7 @@ class TestAPIFailureHandling:
             "--dry-run"
         ])
 
-        with patch("organize.api.test_api_connectivity", return_value=False):
+        with patch("organize.config.manager.test_api_connectivity", return_value=False):
             result = manager.validate_api_connectivity()
 
         assert result.valid is False

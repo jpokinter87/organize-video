@@ -1,11 +1,15 @@
 """Execution context for video organization operations."""
 
+import threading
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Generator
 
-# Global context storage
+# Verrou pour l'accès thread-safe au contexte global
+_context_lock = threading.RLock()
+
+# Stockage du contexte global
 _current_context: Optional["ExecutionContext"] = None
 
 
@@ -47,26 +51,28 @@ class ExecutionContext:
 
 def get_context() -> ExecutionContext:
     """
-    Get the current execution context.
+    Get the current execution context (thread-safe).
 
     Returns:
         Current ExecutionContext, or a default one if not set.
     """
     global _current_context
-    if _current_context is None:
-        return ExecutionContext()
-    return _current_context
+    with _context_lock:
+        if _current_context is None:
+            return ExecutionContext()
+        return _current_context
 
 
 def set_context(ctx: Optional[ExecutionContext]) -> None:
     """
-    Set the global execution context.
+    Set the global execution context (thread-safe).
 
     Args:
         ctx: ExecutionContext to set, or None to reset to default.
     """
     global _current_context
-    _current_context = ctx
+    with _context_lock:
+        _current_context = ctx
 
 
 @contextmanager
@@ -75,7 +81,7 @@ def execution_context(
     **kwargs
 ) -> Generator[ExecutionContext, None, None]:
     """
-    Context manager for temporarily setting execution context.
+    Context manager for temporarily setting execution context (thread-safe).
 
     Args:
         ctx: An existing ExecutionContext to use, or None to create one.
@@ -96,13 +102,15 @@ def execution_context(
             process_videos()
     """
     global _current_context
-    previous = _current_context
 
-    if ctx is None:
-        ctx = ExecutionContext(**kwargs)
-    _current_context = ctx
+    with _context_lock:
+        previous = _current_context
+        if ctx is None:
+            ctx = ExecutionContext(**kwargs)
+        _current_context = ctx
 
     try:
         yield ctx
     finally:
-        _current_context = previous
+        with _context_lock:
+            _current_context = previous

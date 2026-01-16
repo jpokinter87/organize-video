@@ -8,7 +8,17 @@ from typing import Optional, Tuple
 from loguru import logger
 
 from organize.config.cli import CLIArgs, parse_arguments, args_to_cli_args
-from organize.config.settings import CATEGORIES
+from organize.config.settings import CATEGORIES, LOG_FILE_PATH, LOG_ROTATION_SIZE
+
+# Imports des modules utilisés par les méthodes de validation
+# Déplacés au niveau module pour clarifier les dépendances
+from organize.api import validate_api_keys as check_api_keys, test_api_connectivity
+from organize.filesystem import (
+    get_available_categories,
+    setup_working_directories as fs_setup_working_directories,
+    count_videos,
+    aplatir_repertoire_series,
+)
 
 
 @dataclass
@@ -64,8 +74,8 @@ class ConfigurationManager:
 
         # File logging
         logger.add(
-            "organize.log",
-            rotation="100 MB",
+            LOG_FILE_PATH,
+            rotation=LOG_ROTATION_SIZE,
             level="DEBUG" if debug else "INFO"
         )
 
@@ -96,9 +106,7 @@ class ConfigurationManager:
         Retourne :
             ValidationResult avec statut et message d'erreur optionnel.
         """
-        from organize.api import validate_api_keys as check_keys
-
-        if not check_keys():
+        if not check_api_keys():
             return ValidationResult(
                 valid=False,
                 error_message="Cles API manquantes (TMDB_API_KEY, TVDB_API_KEY)"
@@ -112,8 +120,6 @@ class ConfigurationManager:
         Retourne :
             ValidationResult avec statut et message d'erreur optionnel.
         """
-        from organize.api import test_api_connectivity
-
         if not test_api_connectivity():
             return ValidationResult(
                 valid=False,
@@ -128,8 +134,6 @@ class ConfigurationManager:
         Retourne :
             Tuple (ValidationResult, liste des catégories disponibles).
         """
-        from organize.filesystem import get_available_categories
-
         available = get_available_categories(self.cli_args.search_dir)
         if not available:
             return (
@@ -170,9 +174,7 @@ class ConfigurationManager:
         Retourne :
             Tuple (work_dir, temp_dir, original_dir, waiting_folder).
         """
-        from organize.filesystem import setup_working_directories
-
-        return setup_working_directories(
+        return fs_setup_working_directories(
             self.cli_args.output_dir,
             self.cli_args.dry_run
         )
@@ -184,13 +186,9 @@ class ConfigurationManager:
         Retourne :
             Nombre de vidéos trouvées.
         """
-        from organize.filesystem import count_videos
-
         return count_videos(self.cli_args.search_dir)
 
     def flatten_series_directories(self) -> None:
         """Aplatit les répertoires de séries si pas en mode simulation."""
-        from organize.filesystem import aplatir_repertoire_series
-
         if not self.cli_args.dry_run:
             aplatir_repertoire_series(self.cli_args.search_dir)

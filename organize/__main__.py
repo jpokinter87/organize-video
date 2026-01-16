@@ -10,17 +10,22 @@ Supports:
 
 import sys
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 from loguru import logger
 
 from organize.config import CLIArgs, ConfigurationManager
+from organize.config.manager import ValidationResult
 from organize.ui import ConsoleUI
 from organize.pipeline import (
     PipelineContext,
     PipelineOrchestrator,
+    ProcessingStats,
     create_video_list,
 )
-from organize.filesystem import copy_tree
+from organize.filesystem import copy_tree, cleanup_directories
+from organize.config.settings import MULTIPROCESSING_VIDEO_THRESHOLD
+from organize.models.video import Video
 
 
 # ============================================================================
@@ -75,7 +80,7 @@ def display_simulation_banner(console: ConsoleUI) -> None:
     )
 
 
-def display_statistics(stats, dry_run: bool, console: ConsoleUI) -> None:
+def display_statistics(stats: ProcessingStats, dry_run: bool, console: ConsoleUI) -> None:
     """Display processing statistics."""
     console.print("\n")
     console.print_panel(
@@ -98,9 +103,27 @@ def display_statistics(stats, dry_run: bool, console: ConsoleUI) -> None:
 # LEGACY MODE SUPPORT
 # ============================================================================
 
-def run_legacy_mode() -> int:
+def _extract_legacy_flag(args: List[str]) -> Tuple[bool, List[str]]:
+    """
+    Extrait le flag --legacy des arguments sans modifier sys.argv.
+
+    Args:
+        args: Liste des arguments de ligne de commande.
+
+    Returns:
+        Tuple (is_legacy_mode, arguments_sans_legacy).
+    """
+    is_legacy = "--legacy" in args
+    filtered_args = [arg for arg in args if arg != "--legacy"]
+    return is_legacy, filtered_args
+
+
+def run_legacy_mode(args: List[str]) -> int:
     """
     Run in legacy mode by delegating to organize.py main().
+
+    Args:
+        args: Command line arguments (without --legacy flag).
 
     Returns:
         Exit code from legacy main().
@@ -122,12 +145,19 @@ def run_legacy_mode() -> int:
         if parent_dir not in sys.path:
             sys.path.insert(0, parent_dir)
 
-        spec = importlib.util.spec_from_file_location("organize_original", organize_py)
-        organize_module = importlib.util.module_from_spec(spec)
-        sys.modules["organize_original"] = organize_module
-        spec.loader.exec_module(organize_module)
-        organize_module.main()
-        return 0
+        # Sauvegarder sys.argv et le restaurer après
+        original_argv = sys.argv
+        try:
+            sys.argv = args
+            spec = importlib.util.spec_from_file_location("organize_original", organize_py)
+            organize_module = importlib.util.module_from_spec(spec)
+            sys.modules["organize_original"] = organize_module
+            spec.loader.exec_module(organize_module)
+            organize_module.main()
+            return 0
+        finally:
+            sys.argv = original_argv
+
     except KeyboardInterrupt:
         console.print("\n[yellow]Interruption par l'utilisateur[/yellow]")
         return 130
@@ -137,16 +167,191 @@ def run_legacy_mode() -> int:
         return 1
 
 
-def check_legacy_flag() -> bool:
-    """Check if --legacy flag is in arguments."""
-    return "--legacy" in sys.argv
+# ============================================================================
+# VALIDATION HELPERS
+# ============================================================================
+
+def _validate_configuration(
+    config_manager: ConfigurationManager,
+    console: ConsoleUI
+) -> Tuple[bool, Optional[list]]:
+    """
+    Valide toute la configuration avant le traitement.
+
+    Args:
+        config_manager: Gestionnaire de configuration.
+        console: Interface console.
+
+    Returns:
+        Tuple (validation_ok, categories_disponibles).
+        Si validation_ok est False, categories_disponibles est None.
+    """
+    # Valider le répertoire d'entrée
+    validation = config_manager.validate_input_directory()
+    if not validation.valid:
+        console.print(f"[red]Erreur: {validation.error_message}[/red]")
+        return False, None
+
+    # Valider les clés API
+    validation = config_manager.validate_api_keys()
+    if not validation.valid:
+        console.print(f"[red]Erreur: {validation.error_message}[/red]")
+        return False, None
+
+    # Valider la connectivité API
+    validation = config_manager.validate_api_connectivity()
+    if not validation.valid:
+        console.print(f"[red]Erreur: {validation.error_message}[/red]")
+        return False, None
+
+    # Valider les catégories
+    cat_validation, available_categories = config_manager.validate_categories()
+    if not cat_validation.valid:
+        console.print(f"[red]{cat_validation.error_message}[/red]")
+        return False, None
+
+    console.print(
+        f"[green]Categories detectees: "
+        f"{', '.join([cat.name for cat in available_categories])}[/green]"
+    )
+    return True, available_categories
+
+
+def _prepare_videos(
+    config_manager: ConfigurationManager,
+    cli_args: CLIArgs,
+    console: ConsoleUI
+) -> Tuple[Optional[List[Video]], Path, Path, Path, Path]:
+    """
+    Prépare la liste des vidéos et les répertoires de travail.
+
+    Args:
+        config_manager: Gestionnaire de configuration.
+        cli_args: Arguments CLI.
+        console: Interface console.
+
+    Returns:
+        Tuple (liste_videos, work_dir, temp_dir, original_dir, waiting_folder).
+        liste_videos est None si aucune vidéo à traiter.
+    """
+    # Compter les vidéos
+    nb_videos = config_manager.get_video_count()
+    if nb_videos == 0:
+        console.print("[yellow]Aucune video a traiter[/yellow]")
+        return None, Path(), Path(), Path(), Path()
+
+    console.print(f"\n[bold green]{nb_videos} videos detectees[/bold green]")
+
+    # Aplatir les répertoires de séries
+    if not cli_args.dry_run:
+        console.print("[blue]Aplatissement des repertoires series...[/blue]")
+        config_manager.flatten_series_directories()
+    else:
+        console.print("[dim]SIMULATION - Aplatissement des repertoires ignore[/dim]")
+
+    # Configurer les répertoires de travail
+    work_dir, temp_dir, original_dir, waiting_folder = config_manager.setup_working_directories()
+
+    # Créer la liste des vidéos
+    console.print("[blue]Analyse et creation des liens temporaires...[/blue]")
+    list_of_videos = create_video_list(
+        cli_args.search_dir,
+        cli_args.days_to_process,
+        temp_dir,
+        cli_args.storage_dir,
+        cli_args.force_mode,
+        cli_args.dry_run,
+        use_multiprocessing=(nb_videos > MULTIPROCESSING_VIDEO_THRESHOLD)
+    )
+
+    if not list_of_videos:
+        if cli_args.force_mode:
+            console.print("[yellow]Aucune video a traiter (meme en mode force)[/yellow]")
+        else:
+            console.print("[yellow]Aucune nouvelle video a traiter[/yellow]")
+        return None, work_dir, temp_dir, original_dir, waiting_folder
+
+    console.print(f"[green]{len(list_of_videos)} videos pretes pour le traitement[/green]")
+    return list_of_videos, work_dir, temp_dir, original_dir, waiting_folder
+
+
+def _execute_pipeline(
+    list_of_videos: List[Video],
+    cli_args: CLIArgs,
+    work_dir: Path,
+    temp_dir: Path,
+    original_dir: Path,
+    waiting_folder: Path,
+    console: ConsoleUI
+) -> ProcessingStats:
+    """
+    Exécute le pipeline de traitement des vidéos.
+
+    Args:
+        list_of_videos: Liste des vidéos à traiter.
+        cli_args: Arguments CLI.
+        work_dir: Répertoire de travail.
+        temp_dir: Répertoire temporaire.
+        original_dir: Répertoire des originaux.
+        waiting_folder: Dossier d'attente.
+        console: Interface console.
+
+    Returns:
+        Statistiques de traitement.
+    """
+    # Sauvegarder les liens originaux
+    if not cli_args.dry_run:
+        logger.info("Sauvegarde des liens vers les fichiers originaux")
+        copy_tree(temp_dir, original_dir, cli_args.dry_run)
+        cleanup_directories(work_dir)
+        work_dir.mkdir(exist_ok=True)
+    else:
+        console.print("[dim]SIMULATION - Sauvegarde et nettoyage ignores[/dim]")
+
+    # Créer le contexte du pipeline et l'orchestrateur
+    context = PipelineContext(
+        search_dir=cli_args.search_dir,
+        storage_dir=cli_args.storage_dir,
+        symlinks_dir=cli_args.symlinks_dir,
+        output_dir=cli_args.output_dir,
+        work_dir=work_dir,
+        temp_dir=temp_dir,
+        original_dir=original_dir,
+        waiting_folder=waiting_folder,
+        dry_run=cli_args.dry_run,
+        force_mode=cli_args.force_mode,
+        days_to_process=cli_args.days_to_process,
+    )
+    orchestrator = PipelineOrchestrator(context)
+
+    # Traiter les vidéos
+    console.print("[blue]Formatage des titres et organisation...[/blue]")
+    stats = orchestrator.process_videos(list_of_videos)
+
+    # Traiter les titres des épisodes de séries
+    if not cli_args.dry_run:
+        series_count = sum(1 for v in list_of_videos if v.is_serie() and v.title_fr)
+        if series_count > 0:
+            console.print(
+                f"[blue]Recherche des titres d'episodes pour {series_count} series...[/blue]"
+            )
+    else:
+        console.print("[yellow]SIMULATION - Recherche des titres d'episodes...[/yellow]")
+
+    orchestrator.process_series_titles(list_of_videos)
+
+    # Finaliser
+    console.print("[blue]Copie finale vers le repertoire de destination...[/blue]")
+    orchestrator.finalize()
+
+    return stats
 
 
 # ============================================================================
 # MAIN FUNCTION
 # ============================================================================
 
-def main() -> int:
+def main(args: Optional[List[str]] = None) -> int:
     """
     Main entry point for the video organization tool.
 
@@ -154,14 +359,19 @@ def main() -> int:
     - Modern mode (default): Uses modular components
     - Legacy mode (--legacy): Delegates entirely to organize.py
 
+    Args:
+        args: Command line arguments (defaults to sys.argv).
+
     Returns:
         Exit code (0 for success, non-zero for errors).
     """
+    if args is None:
+        args = sys.argv
+
     # Vérifier le mode legacy en premier (avant de parser les autres arguments)
-    if check_legacy_flag():
-        # Retirer --legacy de argv avant de déléguer
-        sys.argv = [arg for arg in sys.argv if arg != "--legacy"]
-        return run_legacy_mode()
+    is_legacy, filtered_args = _extract_legacy_flag(args)
+    if is_legacy:
+        return run_legacy_mode(filtered_args)
 
     console = ConsoleUI()
     config_manager = ConfigurationManager()
@@ -177,110 +387,24 @@ def main() -> int:
         display_configuration(cli_args, console)
 
         # Valider la configuration
-        validation = config_manager.validate_input_directory()
-        if not validation.valid:
-            console.print(f"[red]Erreur: {validation.error_message}[/red]")
+        validation_ok, _ = _validate_configuration(config_manager, console)
+        if not validation_ok:
             return 1
 
-        validation = config_manager.validate_api_keys()
-        if not validation.valid:
-            console.print(f"[red]Erreur: {validation.error_message}[/red]")
-            return 1
-
-        validation = config_manager.validate_api_connectivity()
-        if not validation.valid:
-            console.print(f"[red]Erreur: {validation.error_message}[/red]")
-            return 1
-
-        cat_validation, available_categories = config_manager.validate_categories()
-        if not cat_validation.valid:
-            console.print(f"[red]{cat_validation.error_message}[/red]")
-            return 1
-
-        console.print(f"[green]Categories detectees: {', '.join([cat.name for cat in available_categories])}[/green]")
-
-        # Compter les vidéos
-        nb_videos = config_manager.get_video_count()
-        if nb_videos == 0:
-            console.print("[yellow]Aucune video a traiter[/yellow]")
-            return 0
-
-        console.print(f"\n[bold green]{nb_videos} videos detectees[/bold green]")
-
-        # Aplatir les répertoires de séries
-        if not cli_args.dry_run:
-            console.print("[blue]Aplatissement des repertoires series...[/blue]")
-            config_manager.flatten_series_directories()
-        else:
-            console.print("[dim]SIMULATION - Aplatissement des repertoires ignore[/dim]")
-
-        # Configurer les répertoires de travail
-        work_dir, temp_dir, original_dir, waiting_folder = config_manager.setup_working_directories()
-
-        # Créer la liste des vidéos
-        console.print("[blue]Analyse et creation des liens temporaires...[/blue]")
-        list_of_videos = create_video_list(
-            cli_args.search_dir,
-            cli_args.days_to_process,
-            temp_dir,
-            cli_args.storage_dir,
-            cli_args.force_mode,
-            cli_args.dry_run,
-            use_multiprocessing=(nb_videos > 50)
+        # Préparer les vidéos
+        list_of_videos, work_dir, temp_dir, original_dir, waiting_folder = _prepare_videos(
+            config_manager, cli_args, console
         )
 
-        if not list_of_videos:
-            if cli_args.force_mode:
-                console.print("[yellow]Aucune video a traiter (meme en mode force)[/yellow]")
-            else:
-                console.print("[yellow]Aucune nouvelle video a traiter[/yellow]")
+        if list_of_videos is None:
             return 0
 
-        console.print(f"[green]{len(list_of_videos)} videos pretes pour le traitement[/green]")
-
-        # Sauvegarder les liens originaux
-        if not cli_args.dry_run:
-            logger.info("Sauvegarde des liens vers les fichiers originaux")
-            from organize.filesystem import cleanup_directories
-            copy_tree(temp_dir, original_dir, cli_args.dry_run)
-            cleanup_directories(work_dir)
-            work_dir.mkdir(exist_ok=True)
-        else:
-            console.print("[dim]SIMULATION - Sauvegarde et nettoyage ignores[/dim]")
-
-        # Créer le contexte du pipeline et l'orchestrateur
-        context = PipelineContext(
-            search_dir=cli_args.search_dir,
-            storage_dir=cli_args.storage_dir,
-            symlinks_dir=cli_args.symlinks_dir,
-            output_dir=cli_args.output_dir,
-            work_dir=work_dir,
-            temp_dir=temp_dir,
-            original_dir=original_dir,
-            waiting_folder=waiting_folder,
-            dry_run=cli_args.dry_run,
-            force_mode=cli_args.force_mode,
-            days_to_process=cli_args.days_to_process,
+        # Exécuter le pipeline
+        stats = _execute_pipeline(
+            list_of_videos, cli_args,
+            work_dir, temp_dir, original_dir, waiting_folder,
+            console
         )
-        orchestrator = PipelineOrchestrator(context)
-
-        # Traiter les vidéos
-        console.print("[blue]Formatage des titres et organisation...[/blue]")
-        stats = orchestrator.process_videos(list_of_videos)
-
-        # Traiter les titres des épisodes de séries
-        if not cli_args.dry_run:
-            series_count = sum(1 for v in list_of_videos if v.is_serie() and v.title_fr)
-            if series_count > 0:
-                console.print(f"[blue]Recherche des titres d'episodes pour {series_count} series...[/blue]")
-        else:
-            console.print("[yellow]SIMULATION - Recherche des titres d'episodes...[/yellow]")
-
-        orchestrator.process_series_titles(list_of_videos)
-
-        # Finaliser
-        console.print("[blue]Copie finale vers le repertoire de destination...[/blue]")
-        orchestrator.finalize()
 
         # Afficher les statistiques
         display_statistics(stats, cli_args.dry_run, console)
@@ -293,7 +417,8 @@ def main() -> int:
         console.print("\n[yellow]Interruption par l'utilisateur[/yellow]")
         return 130
 
-    except (OSError, IOError) as e:
+    except OSError as e:
+        # OSError inclut FileNotFoundError, PermissionError, etc.
         logger.error(f"Erreur systeme: {e}")
         console.print(f"[red]Erreur systeme: {e}[/red]")
         return 1

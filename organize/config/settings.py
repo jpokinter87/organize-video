@@ -127,6 +127,9 @@ MAX_CLEANUP_ITERATIONS: int = 10
 # Valeur sentinelle pour « traiter tous les fichiers »
 PROCESS_ALL_FILES_DAYS: float = 100000000.0
 
+# Seuil de vidéos pour activer le multiprocessing
+MULTIPROCESSING_VIDEO_THRESHOLD: int = 50
+
 # =============================================================================
 # CONSTANTES DE HACHAGE MD5
 # =============================================================================
@@ -313,6 +316,16 @@ ANIMATION_SUBCATEGORIES: Dict[str, str] = {
 
 # Combinaisons de genres spéciales
 COMEDY_DRAMA_GENRE: str = 'Comédie dramatique'
+
+# =============================================================================
+# LOGGING
+# =============================================================================
+
+# Chemin du fichier de log
+LOG_FILE_PATH: str = 'organize.log'
+
+# Rotation du fichier de log
+LOG_ROTATION_SIZE: str = '100 MB'
 
 # =============================================================================
 # GESTION DE L'ÉTAT DE L'APPLICATION
