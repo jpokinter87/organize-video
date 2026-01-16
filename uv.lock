@@ -198,7 +198,7 @@ wheels = [
 ]
 
 [[package]]
-name = "organize"
+name = "organize-video"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [

@@ -53,7 +53,7 @@ class TmdbClient:
         Returns:
             Full URL for the API request.
         """
-        # Use movie endpoint for Films and Animation, TV for series
+        # Utiliser l'endpoint movie pour Films et Animation, TV pour les séries
         endpoint = (
             self.SEARCH_MOVIE_ENDPOINT
             if content_type in FILMANIM

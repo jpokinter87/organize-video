@@ -13,55 +13,16 @@ from tqdm import tqdm
 from organize.models.video import Video
 from organize.utils.hash import checksum_md5
 from organize.utils.database import select_db, hash_exists_in_db, add_hash_to_db
+from organize.utils.app_state import (
+    load_last_exec,
+    get_last_exec_readonly,
+)
 from organize.classification.type_detector import type_of_video, extract_file_infos
 from organize.filesystem.discovery import get_files
 from organize.pipeline.processor import create_paths
 
 # Console pour l'affichage
 console = Console()
-
-
-def load_last_exec() -> float:
-    """
-    Charge la date de dernière exécution et met à jour le fichier.
-
-    Lit la date de dernière exécution depuis le fichier last_exec_video.
-    Si le fichier n'existe pas ou est invalide, utilise 3 jours en arrière.
-    Sauvegarde la date actuelle pour la prochaine exécution.
-
-    Returns:
-        Timestamp de la dernière exécution.
-    """
-    try:
-        with open("last_exec_video", "r") as last_exec_file:
-            last_exec = float(last_exec_file.read().strip())
-    except (FileNotFoundError, ValueError):
-        last_exec = time.time() - 259200  # 3 jours avant
-
-    # Sauvegarde la date actuelle
-    try:
-        with open("last_exec_video", "w") as last_exec_file:
-            last_exec_file.write(str(time.time()))
-    except IOError as e:
-        logger.warning(f"Impossible de sauvegarder la date d'exécution : {e}")
-
-    return last_exec
-
-
-def get_last_exec_readonly() -> float:
-    """
-    Lit la date de dernière exécution sans la modifier.
-
-    Utilisé en mode simulation pour ne pas modifier le fichier last_exec_video.
-
-    Returns:
-        Timestamp de la dernière exécution.
-    """
-    try:
-        with open("last_exec_video", "r") as last_exec_file:
-            return float(last_exec_file.read().strip())
-    except (FileNotFoundError, ValueError):
-        return time.time() - 259200  # 3 jours avant
 
 
 def process_single_video(args: Tuple[Path, Path, Path, bool, bool]) -> Optional[Video]:
@@ -86,21 +47,23 @@ def process_single_video(args: Tuple[Path, Path, Path, bool, bool]) -> Optional[
         video.type_file = type_of_video(file)
         video.extended_sub = Path(video.type_file) / "Séries TV" if video.is_serie() else Path("")
 
-        # Vérification des doublons seulement si pas en mode force
-        if not force_mode and not dry_run:
+        # Vérification des doublons seulement si pas en mode force et hash valide
+        if not force_mode and not dry_run and video.hash is not None:
             video_db = select_db(file, storage_dir)
             if hash_exists_in_db(video_db, video.hash):
                 logger.info(f"Hash de {file.name} déjà présent dans {video_db.name}")
                 return None
         elif dry_run:
             logger.debug(f"SIMULATION - Vérification hash ignorée pour {file.name}")
+        elif video.hash is None:
+            logger.warning(f"Hash invalide pour {file.name}, traitement sans vérification de doublon")
 
         # Extraction des informations
         video.title, video.date_film, video.sequence, video.season, video.episode, video.spec = extract_file_infos(
             video)
 
-        # Ajout à la base de données seulement si pas en mode force ou dry_run
-        if not force_mode and not dry_run:
+        # Ajout à la base de données seulement si pas en mode force ou dry_run et hash valide
+        if not force_mode and not dry_run and video.hash is not None:
             add_hash_to_db(file, video.hash, storage_dir)
         elif dry_run:
             logger.debug(f"SIMULATION - Ajout hash ignoré pour {file.name}")

@@ -64,8 +64,8 @@ class TvdbClient:
                 language=lang,
                 interactive=False
             )
-        except Exception as e:
-            logger.warning(f"Error creating TVDB client: {e}")
+        except (tvdb_api.tvdb_error, ConnectionError, OSError) as e:
+            logger.warning(f"Erreur lors de la création du client TVDB: {e}")
             return None
 
     def get_series_id(self, series_name: str, language: Optional[str] = None) -> Optional[int]:
@@ -87,10 +87,10 @@ class TvdbClient:
             series = client[series_name]
             return series['id'] if series else None
         except (tvdb_api.tvdb_shownotfound, KeyError) as e:
-            logger.debug(f"Series '{series_name}' not found: {e}")
+            logger.debug(f"Série '{series_name}' non trouvée: {e}")
             return None
-        except Exception as e:
-            logger.warning(f"Error searching for series '{series_name}': {e}")
+        except (tvdb_api.tvdb_error, ConnectionError, OSError) as e:
+            logger.warning(f"Erreur lors de la recherche de la série '{series_name}': {e}")
             return None
 
     def get_episode_info(
@@ -122,10 +122,10 @@ class TvdbClient:
         except (tvdb_api.tvdb_shownotfound,
                 tvdb_api.tvdb_seasonnotfound,
                 tvdb_api.tvdb_episodenotfound) as e:
-            logger.debug(f"Episode S{season:02d}E{episode:02d} not found: {e}")
+            logger.debug(f"Episode S{season:02d}E{episode:02d} non trouvé: {e}")
             return None
-        except Exception as e:
-            logger.warning(f"Error fetching episode info: {e}")
+        except (tvdb_api.tvdb_error, ConnectionError, OSError, KeyError) as e:
+            logger.warning(f"Erreur lors de la récupération des infos de l'épisode: {e}")
             return None
 
     def get_episode_title(
@@ -174,7 +174,7 @@ class TvdbClient:
             Dict with 'series_id', 'episode_name', 'language' keys,
             or None if not found in any language.
         """
-        # Try French first
+        # Essayer le français d'abord
         series_id = self.get_series_id(series_name, 'fr')
         if series_id:
             info = self.get_episode_info(series_id, season, episode, 'fr')
@@ -185,7 +185,7 @@ class TvdbClient:
                     'language': 'fr'
                 }
 
-        # Fallback to English
+        # Repli vers l'anglais
         series_id = self.get_series_id(series_name, 'en')
         if series_id:
             info = self.get_episode_info(series_id, season, episode, 'en')

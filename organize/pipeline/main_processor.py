@@ -8,45 +8,13 @@ from loguru import logger
 from rich.console import Console
 from rich.panel import Panel
 
+from organize.config import FILMANIM, GENRES, GENRE_UNDETECTED
+
 if TYPE_CHECKING:
     from organize.models.video import Video
 
 # Console pour l'affichage
 console = Console()
-
-# Types de vidéos (films et animation)
-FILMANIM = {'Films', 'Animation'}
-
-# Mapping des genres TMDB vers les genres français
-GENRES = {
-    28: "Action",
-    12: "Aventure",
-    16: "Animation",
-    35: "Comedie",
-    80: "Policier",
-    99: "Documentaire",
-    18: "Drame",
-    10751: "Famille",
-    14: "Fantastique",
-    36: "Histoire",
-    27: "Horreur",
-    10402: "Musique",
-    9648: "Mystere",
-    10749: "Romance",
-    878: "Science-Fiction",
-    10770: "Telefilm",
-    53: "Thriller",
-    10752: "Guerre",
-    37: "Western",
-    10759: "Action & Adventure",
-    10762: "Kids",
-    10763: "News",
-    10764: "Reality",
-    10765: "Science-Fiction & Fantastique",
-    10766: "Soap",
-    10767: "Talk",
-    10768: "War & Politics",
-}
 
 
 def _get_release_date(movie: dict) -> int:
@@ -205,7 +173,7 @@ def set_fr_title_and_category(video: "Video") -> "Video":
         video = handle_unsupported_genres(video, video.list_genres)
 
         # Seulement classifier si on a des genres supportés
-        if video.list_genres and video.list_genres[0] != "Non détecté":
+        if video.list_genres and video.list_genres[0] != GENRE_UNDETECTED:
             video = classify_movie(video)
     else:
         video.genre = ''

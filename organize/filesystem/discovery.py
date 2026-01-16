@@ -53,8 +53,8 @@ def get_files(directory: Path) -> Generator[Path, None, None]:
                     file_count += 1
                     yield file
             logger.debug(f"  → {file_count} files found in {category_path.name}")
-    except Exception as e:
-        logger.warning(f"Error scanning {directory}: {e}")
+    except OSError as e:
+        logger.warning(f"Erreur d'accès au système de fichiers pour {directory}: {e}")
 
 
 def count_videos(search_dir: Path) -> int:
@@ -81,7 +81,7 @@ def count_videos(search_dir: Path) -> int:
                     category_count += 1
             video_count += category_count
             logger.debug(f"{category_count} files in {category_path.name}")
-    except Exception as e:
-        logger.warning(f"Error counting files: {e}")
+    except OSError as e:
+        logger.warning(f"Erreur lors du comptage des fichiers: {e}")
 
     return video_count

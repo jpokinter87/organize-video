@@ -117,7 +117,7 @@ class TestAddHashToDb:
         db_path = tmp_path / 'symlink_video_Films.db'
         db_path.touch()
 
-        with patch('sqlite3.connect', side_effect=Exception("DB Error")):
+        with patch('sqlite3.connect', side_effect=sqlite3.Error("DB Error")):
             result = add_hash_to_db(file, "abc123", tmp_path)
             assert result is False
 
@@ -170,7 +170,7 @@ class TestHashExistsInDb:
         """Gère gracieusement une erreur de base."""
         db_path = tmp_path / "test.db"
 
-        with patch('sqlite3.connect', side_effect=Exception("DB Error")):
+        with patch('sqlite3.connect', side_effect=sqlite3.Error("DB Error")):
             result = hash_exists_in_db(db_path, "abc123")
             assert result is False
 

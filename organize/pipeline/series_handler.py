@@ -45,7 +45,7 @@ def find_series_folder(file_path: Path) -> Path:
     current = file_path.parent
 
     while current.parent and current.parent != current:
-        # Check if folder name ends with (YYYY)
+        # Vérifier si le nom du dossier se termine par (YYYY)
         if re.search(r'\(\d{4}\)$', current.name):
             return current
         current = current.parent
@@ -88,7 +88,7 @@ def build_episode_filename(
 
     filename = " ".join(parts)
 
-    # Clean up multiple spaces
+    # Nettoyer les espaces multiples
     filename = " ".join(filename.split())
 
     return f"{filename}{extension}"
@@ -111,7 +111,7 @@ def should_create_season_folder(current_path: Path, season: int) -> bool:
     season_folder = format_season_folder(season)
     parent_str = str(current_path.parent)
 
-    # Check if we're already in the correct season folder
+    # Vérifier si on est déjà dans le bon dossier saison
     return season_folder not in parent_str
 
 
@@ -139,7 +139,7 @@ def organize_episode_by_season(
     season_folder = format_season_folder(season)
 
     if not should_create_season_folder(current_path, season):
-        # Already in correct season folder, just rename if needed
+        # Déjà dans le bon dossier saison, juste renommer si nécessaire
         new_path = current_path.parent / formatted_filename
         if new_path != current_path:
             if not dry_run and current_path.exists():
@@ -147,7 +147,7 @@ def organize_episode_by_season(
                 logger.debug(f"Episode renamed: {new_path}")
         return new_path
 
-    # Need to create/move to season folder
+    # Besoin de créer/déplacer vers le dossier saison
     series_folder = find_series_folder(current_path)
     season_path = series_folder / season_folder
     new_path = season_path / formatted_filename

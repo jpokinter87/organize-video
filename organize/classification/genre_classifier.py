@@ -27,18 +27,18 @@ def suggest_genre_mapping(unsupported_genres: List[str]) -> str:
     if not unsupported_genres:
         return ""
 
-    # Look for first mapped genre
+    # Rechercher le premier genre mappé
     for genre in unsupported_genres:
         genre_lower = genre.lower()
         if genre_lower in GENRE_MAPPING:
             return GENRE_MAPPING[genre_lower]
 
-        # Partial matching for variations
+        # Correspondance partielle pour les variations
         for unsupported, supported in GENRE_MAPPING.items():
             if unsupported in genre_lower or genre_lower in unsupported:
                 return supported
 
-    # Fallback: narrative indicators suggest Drame
+    # Repli : les indicateurs narratifs suggèrent Drame
     narrative_indicators = ['drama', 'story', 'film', 'movie', 'drame', 'histoire']
     for genre in unsupported_genres:
         for indicator in narrative_indicators:
@@ -77,29 +77,29 @@ def classify_movie(video: "Video") -> "Video":
         video.genre = 'Non détecté'
         return video
 
-    # Keep as-is if already marked as not detected
+    # Conserver tel quel si déjà marqué comme non détecté
     if video.list_genres[0] == "Non détecté":
         video.genre = "Non détecté"
         return video
 
     video_genres = set(video.list_genres)
 
-    # Special handling for animation
+    # Traitement spécial pour l'animation
     if 'Animation' in video_genres:
         return classify_animation(video)
 
-    # Specific genre combinations
+    # Combinaisons de genres spécifiques
     if {'Drame', 'Comédie'}.issubset(video_genres):
         video.genre = 'Comédie dramatique'
         return video
 
-    # Priority genre selection
+    # Sélection de genre prioritaire
     matching_genres = PRIORITY_GENRES.intersection(video_genres)
     if matching_genres:
         video.genre = next(iter(matching_genres))
         return video
 
-    # Take first genre automatically
+    # Prendre le premier genre automatiquement
     video.genre = video.list_genres[0]
     return video
 
@@ -119,9 +119,49 @@ def classify_animation(video: "Video") -> "Video":
     elif 'Films pour enfants' in video.list_genres:
         video.genre = 'Animation/Animation Enfant'
     else:
-        # Automatic choice based on defaults
+        # Choix automatique basé sur les défauts
         video.genre = 'Animation/Animation Enfant'
-        logger.info(f"Animation genre automatically selected: {video.genre}")
+        logger.info(f"Genre animation automatiquement sélectionné : {video.genre}")
 
     video.list_genres = [video.genre if x == 'Animation' else x for x in video.list_genres]
+    return video
+
+
+def handle_unsupported_genres(video: "Video", detected_genres: List[str]) -> "Video":
+    """
+    Gère les genres non supportés en essayant de les mapper vers des genres supportés.
+
+    Si tous les genres détectés sont non supportés, tente de suggérer un mapping
+    automatique. Si aucun mapping n'est trouvé, marque le genre comme 'Non détecté'.
+
+    Args:
+        video: Objet Video à traiter.
+        detected_genres: Liste des genres détectés par l'API.
+
+    Returns:
+        Objet Video avec list_genres mis à jour.
+    """
+    from organize.config import GENRE_UNDETECTED
+
+    if not detected_genres:
+        video.list_genres = [GENRE_UNDETECTED]
+        return video
+
+    valid_genres, unsupported_genres = filter_supported_genres(detected_genres)
+
+    if valid_genres:
+        # On a au moins un genre supporté
+        video.list_genres = valid_genres
+    elif unsupported_genres:
+        # Tous les genres sont non supportés - essayer de mapper
+        suggested = suggest_genre_mapping(unsupported_genres)
+        if suggested:
+            logger.info(f"Genre non supporté '{unsupported_genres}' mappé vers '{suggested}'")
+            video.list_genres = [suggested]
+        else:
+            logger.warning(f"Genres non supportés sans mapping : {unsupported_genres}")
+            video.list_genres = [GENRE_UNDETECTED]
+    else:
+        video.list_genres = [GENRE_UNDETECTED]
+
     return video

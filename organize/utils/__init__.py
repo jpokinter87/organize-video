@@ -8,6 +8,12 @@ from organize.utils.database import (
     remove_hash_from_db,
     get_hash_info,
 )
+from organize.utils.app_state import (
+    AppStateManager,
+    get_app_state,
+    load_last_exec,
+    get_last_exec_readonly,
+)
 
 __all__ = [
     "checksum_md5",
@@ -16,4 +22,8 @@ __all__ = [
     "hash_exists_in_db",
     "remove_hash_from_db",
     "get_hash_info",
+    "AppStateManager",
+    "get_app_state",
+    "load_last_exec",
+    "get_last_exec_readonly",
 ]

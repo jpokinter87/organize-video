@@ -27,6 +27,11 @@ from organize.pipeline.main_processor import (
     query_movie_database,
     set_fr_title_and_category,
 )
+from organize.pipeline.orchestrator import (
+    ProcessingStats,
+    PipelineContext,
+    PipelineOrchestrator,
+)
 
 __all__ = [
     "VideoProcessingResult",
@@ -48,4 +53,7 @@ __all__ = [
     "create_video_list",
     "query_movie_database",
     "set_fr_title_and_category",
+    "ProcessingStats",
+    "PipelineContext",
+    "PipelineOrchestrator",
 ]

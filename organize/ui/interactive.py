@@ -1,5 +1,6 @@
 """Fonctions interactives pour la saisie utilisateur et la visualisation."""
 
+import os
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,7 @@ from organize.ui.confirmations import (
     parse_user_response,
     get_available_genres,
 )
+from organize.config import FILMANIM, VIDEO_PLAYERS, GENRE_UNDETECTED
 
 
 def launch_video_player(video_path: Path) -> bool:
@@ -36,13 +38,13 @@ def launch_video_player(video_path: Path) -> bool:
         video_players = []
 
         if sys.platform.startswith('linux'):
-            potential_players = ['mpv', 'vlc', 'mplayer', 'totem', 'xdg-open']
+            potential_players = VIDEO_PLAYERS.get('linux', ['xdg-open'])
         elif sys.platform == 'darwin':
-            potential_players = ['open', 'vlc', 'mpv']
+            potential_players = VIDEO_PLAYERS.get('darwin', ['open'])
         elif sys.platform.startswith('win'):
-            potential_players = ['vlc', 'wmplayer', 'start']
+            potential_players = VIDEO_PLAYERS.get('windows', ['start'])
         else:
-            potential_players = ['mpv', 'vlc', 'xdg-open']
+            potential_players = VIDEO_PLAYERS.get('linux', ['xdg-open'])
 
         # Chercher le premier lecteur disponible
         for player in potential_players:
@@ -59,7 +61,8 @@ def launch_video_player(video_path: Path) -> bool:
         console.print(f"[blue]Lancement de {player} pour visualiser le fichier...[/blue]")
 
         if sys.platform.startswith('win') and player == 'start':
-            subprocess.Popen(['start', str(video_path)], shell=True)
+            # Utiliser os.startfile() au lieu de shell=True pour éviter l'injection shell
+            os.startfile(str(video_path))
         elif sys.platform == 'darwin' and player == 'open':
             subprocess.Popen(['open', str(video_path)])
         else:
@@ -99,7 +102,7 @@ def choose_genre_manually(video_type: str) -> str:
         Genre sélectionné ou chaîne vide si annulé.
     """
     # Pour les séries, pas de genre nécessaire
-    if video_type not in {'Films', 'Animation'}:
+    if video_type not in FILMANIM:
         return ""
 
     available_genres = get_available_genres()
@@ -109,7 +112,7 @@ def choose_genre_manually(video_type: str) -> str:
     # Affichage en colonnes
     genre_panels = []
     for i, genre in enumerate(available_genres, 1):
-        color = "green" if genre != "Non détecté" else "yellow"
+        color = "green" if genre != GENRE_UNDETECTED else "yellow"
         genre_panels.append(Panel(f"[{color}]{i:2d}. {genre}[/{color}]", expand=False))
 
     console.print(Columns(genre_panels, equal=False, expand=False))
@@ -188,7 +191,7 @@ def user_confirms_match(
     genres_str = ", ".join(tmp_list_genre) if tmp_list_genre else "Aucun genre"
 
     # Détermination du type pour l'affichage
-    if type_video in {'Films', 'Animation'}:
+    if type_video in FILMANIM:
         type_label = "Film" if type_video == "Films" else "Film d'animation"
     else:
         type_label = "Série"

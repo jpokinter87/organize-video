@@ -92,12 +92,12 @@ def normalize(string: str) -> str:
 
     result = string
 
-    # Handle ligatures (œ and æ)
+    # Gestion des ligatures (œ et æ)
     if 'œ' in string or 'æ' in string:
         translate = {'œ': 'o', 'æ': 'a'}
         result = ''.join(translate.get(char, char) for char in string)
 
-    # Character replacements for filename safety
+    # Remplacements de caractères pour la sécurité des noms de fichiers
     result = result.replace(" .", ".")
     result = result.replace(':', ', ').replace('?', '...').replace('/', ' - ')
     result = result.replace(' , ', ', ').replace('  ', ' ')
@@ -129,7 +129,7 @@ def remove_article(title: str) -> str:
         return ""
 
     title = title.strip()
-    seg_f = title[:6]  # Check only first 6 characters for efficiency
+    seg_f = title[:6]  # Vérifier seulement les 6 premiers caractères pour l'efficacité
 
     for article in ARTICLES:
         if article in seg_f and title.startswith(article):

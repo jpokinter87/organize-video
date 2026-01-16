@@ -19,19 +19,19 @@ def create_symlink(source: Path, destination: Path, dry_run: bool = False) -> No
         return
 
     try:
-        # Resolve source if it's already a symlink
+        # Résoudre la source si c'est déjà un symlink
         if source.is_symlink():
             source = source.resolve()
 
-        # Remove existing destination
+        # Supprimer la destination existante
         if destination.exists() or destination.is_symlink():
             destination.unlink()
 
         destination.symlink_to(source)
         logger.debug(f'Symlink created: {source} -> {destination}')
 
-    except Exception as e:
-        logger.warning(f"Error creating symlink {source} -> {destination}: {e}")
+    except OSError as e:
+        logger.warning(f"Erreur lors de la création du symlink {source} -> {destination}: {e}")
 
 
 def verify_symlinks(directory: Path) -> None:
@@ -46,7 +46,7 @@ def verify_symlinks(directory: Path) -> None:
     for item in directory.rglob('*'):
         if item.is_symlink():
             try:
-                # Try to resolve the link
+                # Essayer de résoudre le lien
                 item.resolve(strict=True)
             except (FileNotFoundError, OSError):
                 broken_links.append(item)
@@ -58,8 +58,8 @@ def verify_symlinks(directory: Path) -> None:
             try:
                 link.unlink()
                 logger.info(f"Broken link removed: {link}")
-            except Exception as e:
-                logger.error(f"Could not remove broken link {link}: {e}")
+            except OSError as e:
+                logger.error(f"Impossible de supprimer le lien cassé {link}: {e}")
     else:
         logger.info("All symlinks are valid")
 

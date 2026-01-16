@@ -11,7 +11,7 @@ from organize.filesystem.paths import (
     find_directory_for_video,
     find_symlink_and_sub_dir,
     find_similar_file_in_folder,
-    SubfolderCache,
+    LRUCache,
     clear_caches,
 )
 from organize.models.video import Video
@@ -124,24 +124,24 @@ class TestFindMatchingFolder:
         assert result == tmp_path / "M-N"
 
 
-class TestSubfolderCache:
-    """Tests for SubfolderCache class."""
+class TestLRUCache:
+    """Tests for LRUCache class."""
 
     def test_get_returns_none_for_missing(self):
         """Returns None for missing keys."""
-        cache = SubfolderCache()
+        cache = LRUCache()
         assert cache.get(("a", "b")) is None
 
     def test_set_and_get(self):
         """Can set and retrieve values."""
-        cache = SubfolderCache()
+        cache = LRUCache()
         path = Path("/test/path")
         cache.set(("key1", "key2"), path)
         assert cache.get(("key1", "key2")) == path
 
     def test_clear_removes_all(self):
         """Clear removes all entries."""
-        cache = SubfolderCache()
+        cache = LRUCache()
         cache.set(("k1", "v1"), Path("/p1"))
         cache.set(("k2", "v2"), Path("/p2"))
         cache.clear()

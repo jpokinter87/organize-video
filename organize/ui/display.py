@@ -27,7 +27,7 @@ def generate_tree_structure(videos: List["Video"]) -> Dict[str, List[str]]:
         if not video.formatted_filename:
             continue
 
-        # Build relative path
+        # Construire le chemin relatif
         if video.sub_directory:
             relative_path = str(video.sub_directory)
         else:
@@ -41,7 +41,7 @@ def generate_tree_structure(videos: List["Video"]) -> Dict[str, List[str]]:
             else:
                 relative_path = video.type_file
 
-        # Add to structure
+        # Ajouter à la structure
         if relative_path not in tree_structure:
             tree_structure[relative_path] = []
         tree_structure[relative_path].append(video.formatted_filename)
@@ -67,7 +67,7 @@ def display_tree(
     for folder_path in sorted_folders:
         files = tree_structure[folder_path]
 
-        # Folder node styling
+        # Style du nœud de dossier
         folder_icon = "📁" if "non détectés" not in folder_path else "❓"
         folder_color = "yellow" if "non détectés" in folder_path else "cyan"
 
@@ -76,11 +76,11 @@ def display_tree(
             f"[dim]({format_file_count(len(files))})[/dim]"
         )
 
-        # Add files (limited to avoid clutter)
+        # Ajouter les fichiers (limité pour éviter l'encombrement)
         displayed_files = files[:max_files_per_folder]
 
         for file in displayed_files:
-            # Icon based on file type
+            # Icône basée sur le type de fichier
             if file.endswith(('.mkv', '.avi', '.mp4')):
                 if 'S0' in file and 'E0' in file:
                     icon = "📺"
@@ -91,7 +91,7 @@ def display_tree(
 
             folder_node.add(f"{icon} [dim]{file}[/dim]")
 
-        # Show remaining count if truncated
+        # Afficher le nombre restant si tronqué
         remaining = len(files) - max_files_per_folder
         if remaining > 0:
             folder_node.add(f"[dim]... et {remaining} autres fichiers[/dim]")
@@ -148,14 +148,14 @@ def display_statistics(videos: List["Video"]) -> None:
 
     console.rule("[bold blue]Processing Statistics[/bold blue]")
 
-    # Category stats
+    # Statistiques par catégorie
     category_stats = get_category_stats(videos)
     table = console.create_table("By Category", ["Category", "Count"])
     for cat, count in sorted(category_stats.items()):
         table.add_row(cat, str(count))
     console.print_table(table)
 
-    # Genre stats
+    # Statistiques par genre
     genre_stats = get_category_stats(videos, by_genre=True)
     table = console.create_table("By Genre", ["Genre", "Count"])
     for genre, count in sorted(genre_stats.items(), key=lambda x: -x[1]):
