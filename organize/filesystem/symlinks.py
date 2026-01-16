@@ -19,11 +19,11 @@ def create_symlink(source: Path, destination: Path, dry_run: bool = False) -> No
         return
 
     try:
-        # Resolve source if it's already a symlink
+        # Résoudre la source si c'est déjà un symlink
         if source.is_symlink():
             source = source.resolve()
 
-        # Remove existing destination
+        # Supprimer la destination existante
         if destination.exists() or destination.is_symlink():
             destination.unlink()
 
@@ -46,7 +46,7 @@ def verify_symlinks(directory: Path) -> None:
     for item in directory.rglob('*'):
         if item.is_symlink():
             try:
-                # Try to resolve the link
+                # Essayer de résoudre le lien
                 item.resolve(strict=True)
             except (FileNotFoundError, OSError):
                 broken_links.append(item)

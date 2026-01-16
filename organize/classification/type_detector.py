@@ -68,7 +68,7 @@ def extract_file_infos(video: "Video") -> Tuple[str, int, str, int, int, str]:
     episode = infos.get('episode', 0)
     season_episode = f'- S{season:02d}E{episode:02d} -' if season else ''
 
-    # Language processing
+    # Traitement de la langue
     lang = ''
     lang_data = infos.get('language', '')
     if lang_data:
@@ -78,7 +78,7 @@ def extract_file_infos(video: "Video") -> Tuple[str, int, str, int, int, str]:
     if 'multi' in file.lower():
         lang = "MULTi"
 
-    # Codec processing
+    # Traitement du codec
     video_codec = infos.get('video_codec', '')
     if isinstance(video_codec, list):
         video_codec = video_codec[0] if video_codec else ''
@@ -86,10 +86,10 @@ def extract_file_infos(video: "Video") -> Tuple[str, int, str, int, int, str]:
     if 'av1' in file.lower():
         codec = 'AV1'
 
-    # Resolution
+    # Résolution
     resol = infos.get('screen_size', '')
 
-    # Create specification string
+    # Créer la chaîne de spécifications
     spec = ' '.join(filter(None, [lang, codec, resol]))
     spec = ' '.join(spec.split())
 

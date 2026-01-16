@@ -35,7 +35,7 @@ def display_configuration(cli_args: CLIArgs, console: ConsoleUI) -> None:
         cli_args: Parsed CLI arguments.
         console: Console UI instance.
     """
-    # Build mode status
+    # Construction du statut du mode
     mode_parts = []
     if cli_args.force_mode:
         mode_parts.append("[red]FORCE[/red]")
@@ -43,7 +43,7 @@ def display_configuration(cli_args: CLIArgs, console: ConsoleUI) -> None:
         mode_parts.append("[yellow]SIMULATION[/yellow]")
     mode_status = " ".join(mode_parts) if mode_parts else "[green]Normal[/green]"
 
-    # Build period display
+    # Construction de l'affichage de la période
     if cli_args.process_all:
         period = "Tous les fichiers"
     else:
@@ -117,7 +117,7 @@ def run_legacy_mode() -> int:
             console.print("[red]organize.py non trouvé - mode legacy indisponible[/red]")
             return 1
 
-        # Add parent directory to path for imports
+        # Ajouter le répertoire parent au chemin pour les imports
         parent_dir = str(organize_py.parent)
         if parent_dir not in sys.path:
             sys.path.insert(0, parent_dir)
@@ -157,9 +157,9 @@ def main() -> int:
     Returns:
         Exit code (0 for success, non-zero for errors).
     """
-    # Check for legacy mode first (before parsing other arguments)
+    # Vérifier le mode legacy en premier (avant de parser les autres arguments)
     if check_legacy_flag():
-        # Remove --legacy from argv before delegating
+        # Retirer --legacy de argv avant de déléguer
         sys.argv = [arg for arg in sys.argv if arg != "--legacy"]
         return run_legacy_mode()
 
@@ -167,16 +167,16 @@ def main() -> int:
     config_manager = ConfigurationManager()
 
     try:
-        # Parse and validate configuration
+        # Parser et valider la configuration
         cli_args = config_manager.parse_args()
         config_manager.setup_logging(debug=cli_args.debug)
 
-        # Display banners
+        # Afficher les bannières
         if cli_args.dry_run:
             display_simulation_banner(console)
         display_configuration(cli_args, console)
 
-        # Validate configuration
+        # Valider la configuration
         validation = config_manager.validate_input_directory()
         if not validation.valid:
             console.print(f"[red]Erreur: {validation.error_message}[/red]")
@@ -199,7 +199,7 @@ def main() -> int:
 
         console.print(f"[green]Categories detectees: {', '.join([cat.name for cat in available_categories])}[/green]")
 
-        # Count videos
+        # Compter les vidéos
         nb_videos = config_manager.get_video_count()
         if nb_videos == 0:
             console.print("[yellow]Aucune video a traiter[/yellow]")
@@ -207,17 +207,17 @@ def main() -> int:
 
         console.print(f"\n[bold green]{nb_videos} videos detectees[/bold green]")
 
-        # Flatten series directories
+        # Aplatir les répertoires de séries
         if not cli_args.dry_run:
             console.print("[blue]Aplatissement des repertoires series...[/blue]")
             config_manager.flatten_series_directories()
         else:
             console.print("[dim]SIMULATION - Aplatissement des repertoires ignore[/dim]")
 
-        # Setup working directories
+        # Configurer les répertoires de travail
         work_dir, temp_dir, original_dir, waiting_folder = config_manager.setup_working_directories()
 
-        # Create video list
+        # Créer la liste des vidéos
         console.print("[blue]Analyse et creation des liens temporaires...[/blue]")
         list_of_videos = create_video_list(
             cli_args.search_dir,
@@ -238,7 +238,7 @@ def main() -> int:
 
         console.print(f"[green]{len(list_of_videos)} videos pretes pour le traitement[/green]")
 
-        # Save original links
+        # Sauvegarder les liens originaux
         if not cli_args.dry_run:
             logger.info("Sauvegarde des liens vers les fichiers originaux")
             from organize.filesystem import cleanup_directories
@@ -248,7 +248,7 @@ def main() -> int:
         else:
             console.print("[dim]SIMULATION - Sauvegarde et nettoyage ignores[/dim]")
 
-        # Create pipeline context and orchestrator
+        # Créer le contexte du pipeline et l'orchestrateur
         context = PipelineContext(
             search_dir=cli_args.search_dir,
             storage_dir=cli_args.storage_dir,
@@ -264,11 +264,11 @@ def main() -> int:
         )
         orchestrator = PipelineOrchestrator(context)
 
-        # Process videos
+        # Traiter les vidéos
         console.print("[blue]Formatage des titres et organisation...[/blue]")
         stats = orchestrator.process_videos(list_of_videos)
 
-        # Process series episode titles
+        # Traiter les titres des épisodes de séries
         if not cli_args.dry_run:
             series_count = sum(1 for v in list_of_videos if v.is_serie() and v.title_fr)
             if series_count > 0:
@@ -278,11 +278,11 @@ def main() -> int:
 
         orchestrator.process_series_titles(list_of_videos)
 
-        # Finalize
+        # Finaliser
         console.print("[blue]Copie finale vers le repertoire de destination...[/blue]")
         orchestrator.finalize()
 
-        # Display statistics
+        # Afficher les statistiques
         display_statistics(stats, cli_args.dry_run, console)
 
         logger.info(f"Traitement termine: {stats.total} videos traitees")

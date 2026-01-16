@@ -58,7 +58,7 @@ class Video:
         Returns:
             Formatted filename with title, year, specs, and extension.
         """
-        # Handle undetected files
+        # Gérer les fichiers non détectés
         if not title or title.strip() == '' or not self.title_fr:
             return self._format_undetected_filename()
 
@@ -85,7 +85,7 @@ class Video:
 
         original_name = self.complete_path_original.stem
 
-        # Basic cleaning
+        # Nettoyage de base
         cleaned_title = original_name
         tech_patterns = [
             r'\b\d{4}\b',
@@ -102,11 +102,11 @@ class Video:
         cleaned_title = re.sub(r'\s+', ' ', cleaned_title).strip()
         cleaned_title = cleaned_title.title() if cleaned_title else "Fichier non identifié"
 
-        # Extract year
+        # Extraire l'année
         year_match = re.search(r'\b(19|20)\d{2}\b', original_name)
         year = year_match.group() if year_match else "Année inconnue"
 
-        # Build specs
+        # Construire les specs
         specs = self.spec if self.spec else "Specs inconnues"
         formatted_name = f"{cleaned_title} ({year}) {specs}"
         formatted_name = normalize(formatted_name)

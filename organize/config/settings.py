@@ -11,7 +11,7 @@ from typing import Set, Dict, List, Tuple
 # EXTENSIONS DE FICHIERS
 # =============================================================================
 
-# Video file extensions
+# Extensions de fichiers vidéo
 EXT_VIDEO: Set[str] = {
     "mkv", "avi", "wmv", "mpeg", "mpg", "m4v", "mp4", "flv", "ts", "rm", "rmvb", "mov"
 }
@@ -22,13 +22,13 @@ ALL_EXTENSIONS: Set[str] = {
     ".doc"
 }
 
-# Video categories
+# Catégories vidéo
 CATEGORIES: Set[str] = {'Séries', 'Films', 'Animation', 'Docs#1', 'Docs'}
 FILMANIM: Set[str] = {'Films', 'Animation'}
 FILMSERIE: Set[str] = {'Films', 'Séries'}
 NOT_DOC: Set[str] = {'Films', 'Séries', 'Animation'}
 
-# Default directories
+# Répertoires par défaut
 DEFAULT_SEARCH_DIR = Path('/media/NAS64/temp')
 DEFAULT_STORAGE_DIR = Path('/media/NAS64')
 DEFAULT_SYMLINKS_DIR = Path('/media/Serveur/test')
@@ -62,12 +62,12 @@ GENRES: Dict[int, str] = {
     0: "N/A",
 }
 
-# Genres that take priority in classification
+# Genres prioritaires dans la classification
 PRIORITY_GENRES: Set[str] = {
     'Western', 'Historique', 'SF', 'Films pour enfants', 'Comédie dramatique'
 }
 
-# Supported genres by the video library
+# Genres supportés par la bibliothèque vidéo
 SUPPORTED_GENRES: Set[str] = {
     "Action & Aventure", "Animation", "Comédie", "Comédie dramatique",
     "Policier", "Drame", "Films pour enfants", "Fantastique",
@@ -75,7 +75,7 @@ SUPPORTED_GENRES: Set[str] = {
     "Guerre & espionnage"
 }
 
-# Mapping of unsupported genres to supported ones
+# Correspondance des genres non supportés vers les genres supportés
 GENRE_MAPPING: Dict[str, str] = {
     # Romance
     'romance': 'Drame',
@@ -90,41 +90,41 @@ GENRE_MAPPING: Dict[str, str] = {
     'music': 'Drame',
     'musical': 'Drame',
     'musique': 'Drame',
-    # Crime
+    # Criminel
     'crime': 'Policier',
     'criminal': 'Policier',
-    # Mystery
+    # Mystère
     'mystery': 'Thriller',
     'mystère': 'Thriller',
     'mysterious': 'Thriller',
-    # Adventure
+    # Aventure
     'adventure': 'Action & Aventure',
     'aventure': 'Action & Aventure',
-    # Family
+    # Famille
     'family': 'Films pour enfants',
     'famille': 'Films pour enfants',
-    # Biography
+    # Biographie
     'biography': 'Drame',
     'biographical': 'Drame',
     'biographie': 'Drame',
     # Sport
     'sport': 'Drame',
     'sports': 'Drame',
-    # News
+    # Actualités
     'news': 'Drame',
     'actualités': 'Drame',
 }
 
-# Cache expiration time in seconds (24 hours)
+# Durée d'expiration du cache en secondes (24 heures)
 CACHE_EXPIRATION_SECONDS: int = 86400
 
-# Request timeout in seconds
+# Délai d'attente des requêtes en secondes
 REQUEST_TIMEOUT_SECONDS: int = 10
 
-# Maximum cleanup iterations
+# Nombre maximum d'itérations de nettoyage
 MAX_CLEANUP_ITERATIONS: int = 10
 
-# Sentinel value for "process all files"
+# Valeur sentinelle pour « traiter tous les fichiers »
 PROCESS_ALL_FILES_DAYS: float = 100000000.0
 
 # =============================================================================

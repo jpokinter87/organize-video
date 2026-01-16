@@ -32,7 +32,7 @@ def checksum_md5(filename: Path) -> Optional[str]:
     if not filename.exists():
         return None
 
-    # usedforsecurity=False for FIPS compliance (MD5 used for dedup, not crypto)
+    # usedforsecurity=False pour la conformité FIPS (MD5 utilisé pour la déduplication, pas la crypto)
     md5 = hashlib.md5(usedforsecurity=False)
     try:
         with open(filename, 'rb') as f:

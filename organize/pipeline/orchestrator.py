@@ -126,13 +126,13 @@ class PipelineOrchestrator:
         """Traite une vidéo unique à travers le pipeline."""
         ctx = self.context
 
-        # Process documentaries (simple path)
+        # Traiter les documentaires (chemin simplifié)
         if video.type_file in {'Docs', 'Docs#1'}:
             rename_video_fn(video, self._title_cache, video.type_file, ctx.work_dir, ctx.dry_run)
             move_file_fn(video, ctx.storage_dir, ctx.dry_run)
             return
 
-        # Check cache for repeated titles
+        # Vérifier le cache pour les titres répétés
         cache_key = video.title
         if cache_key in self._title_cache:
             self._apply_cached_metadata(video, cache_key)
@@ -146,7 +146,7 @@ class PipelineOrchestrator:
                 format_undetected_fn,
             )
 
-        # Process video for duplicates
+        # Traiter la vidéo pour les doublons
         processed_video = process_video_fn(
             video, ctx.waiting_folder, ctx.storage_dir, ctx.symlinks_dir
         )
@@ -195,12 +195,12 @@ class PipelineOrchestrator:
                 video, ctx.symlinks_dir / 'Films'
             )
         else:
-            # Normal processing
+            # Traitement normal
             video.complete_dir_symlinks, video.sub_directory = find_symlink_fn(
                 video, ctx.symlinks_dir
             )
 
-            # Enhance specs if needed
+            # Améliorer les specs si nécessaire
             if not video.spec or len(video.spec.split()) < 3:
                 media_spec = media_info_fn(video)
                 if media_spec:
@@ -208,7 +208,7 @@ class PipelineOrchestrator:
 
             video.formatted_filename = video.format_name(video.title_fr)
 
-        # Cache results
+        # Mettre en cache les résultats
         if video.title_fr and video.title:
             self._title_cache[video.title] = (
                 video.title_fr, video.date_film, video.genre,

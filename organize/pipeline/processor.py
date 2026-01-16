@@ -51,7 +51,7 @@ def create_video_from_file(file_path: Path) -> Video:
     video.hash = checksum_md5(file_path)
     video.type_file = type_of_video(file_path)
 
-    # Set extended_sub for series
+    # Définir extended_sub pour les séries
     if video.is_serie():
         video.extended_sub = Path(video.type_file) / "Séries TV"
     else:
@@ -78,20 +78,20 @@ def should_skip_duplicate(
     Returns:
         True if video should be skipped.
     """
-    # Never skip in force mode or dry run
+    # Ne jamais ignorer en mode force ou dry_run
     if force_mode or dry_run:
         if dry_run:
             logger.debug("SIMULATION - Hash check skipped")
         return False
 
-    # Can't check duplicates without a hash
+    # Impossible de vérifier les doublons sans hash
     if hash_value is None:
-        logger.warning("Cannot check for duplicates: hash computation failed")
+        logger.warning("Impossible de vérifier les doublons : calcul du hash échoué")
         return False
 
-    # Check if hash exists
+    # Vérifier si le hash existe
     if hash_exists_fn(hash_value):
-        logger.info("Hash already exists in database")
+        logger.info("Hash déjà présent dans la base de données")
         return True
 
     return False
@@ -144,10 +144,10 @@ def process_single_video_file(
         VideoProcessingResult with processing outcome.
     """
     try:
-        # Create video object with basic metadata
+        # Créer l'objet vidéo avec les métadonnées de base
         video = create_video_from_file(file_path)
 
-        # Check for duplicates
+        # Vérifier les doublons
         if hash_exists_fn is not None and video.hash is not None:
             if should_skip_duplicate(video.hash, force_mode, dry_run, hash_exists_fn):
                 return VideoProcessingResult(
@@ -156,10 +156,10 @@ def process_single_video_file(
                     skip_reason=f"Duplicate hash: {video.hash[:8]}..."
                 )
 
-        # Extract detailed metadata
+        # Extraire les métadonnées détaillées
         video = process_video_metadata(video)
 
-        # Add hash to database if not dry run
+        # Ajouter le hash à la base de données si pas en dry_run
         if add_hash_fn is not None and video.hash is not None and not dry_run and not force_mode:
             add_hash_fn(video.hash)
         elif dry_run:

@@ -88,9 +88,9 @@ def execution_context(
         with execution_context(dry_run=True) as ctx:
             # Operations here see dry_run=True
             process_videos()
-        # Previous context restored
+        # Contexte précédent restauré
 
-        # Or with an existing context:
+        # Ou avec un contexte existant :
         my_ctx = ExecutionContext(dry_run=True)
         with execution_context(my_ctx):
             process_videos()

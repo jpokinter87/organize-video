@@ -174,7 +174,7 @@ class TvdbClient:
             Dict with 'series_id', 'episode_name', 'language' keys,
             or None if not found in any language.
         """
-        # Try French first
+        # Essayer le français d'abord
         series_id = self.get_series_id(series_name, 'fr')
         if series_id:
             info = self.get_episode_info(series_id, season, episode, 'fr')
@@ -185,7 +185,7 @@ class TvdbClient:
                     'language': 'fr'
                 }
 
-        # Fallback to English
+        # Repli vers l'anglais
         series_id = self.get_series_id(series_name, 'en')
         if series_id:
             info = self.get_episode_info(series_id, season, episode, 'en')
