@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 from loguru import logger
 
 from organize.config.cli import CLIArgs, parse_arguments, args_to_cli_args
-from organize.config.settings import CATEGORIES
+from organize.config.settings import CATEGORIES, LOG_FILE_PATH, LOG_ROTATION_SIZE
 
 # Imports des modules utilisés par les méthodes de validation
 # Déplacés au niveau module pour clarifier les dépendances
@@ -74,8 +74,8 @@ class ConfigurationManager:
 
         # File logging
         logger.add(
-            "organize.log",
-            rotation="100 MB",
+            LOG_FILE_PATH,
+            rotation=LOG_ROTATION_SIZE,
             level="DEBUG" if debug else "INFO"
         )
 

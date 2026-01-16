@@ -224,15 +224,42 @@ def validate_directories(
     return True
 
 
+def _resolve_path(path_str: str, param_name: str) -> Path:
+    """
+    Résout un chemin en chemin absolu.
+
+    Args:
+        path_str: Chaîne représentant le chemin.
+        param_name: Nom du paramètre (pour les messages d'erreur).
+
+    Returns:
+        Chemin absolu résolu.
+
+    Raises:
+        ValueError: Si le chemin est invalide.
+    """
+    try:
+        path = Path(path_str).expanduser().resolve()
+        return path
+    except (OSError, ValueError) as e:
+        raise ValueError(f"Chemin invalide pour {param_name}: {path_str} ({e})")
+
+
 def args_to_cli_args(namespace: argparse.Namespace) -> CLIArgs:
     """
     Convert argparse Namespace to CLIArgs dataclass.
+
+    Les chemins sont résolus en chemins absolus pour éviter
+    les problèmes de chemins relatifs.
 
     Args:
         namespace: Parsed argparse Namespace.
 
     Returns:
         CLIArgs instance.
+
+    Raises:
+        ValueError: Si un chemin est invalide.
     """
     # Déterminer le nombre de jours à traiter
     if namespace.all:
@@ -242,6 +269,12 @@ def args_to_cli_args(namespace: argparse.Namespace) -> CLIArgs:
     else:
         days = 0
 
+    # Résoudre tous les chemins en chemins absolus
+    search_dir = _resolve_path(namespace.input, "input")
+    output_dir = _resolve_path(namespace.output, "output")
+    symlinks_dir = _resolve_path(namespace.symlinks, "symlinks")
+    storage_dir = _resolve_path(namespace.storage, "storage")
+
     return CLIArgs(
         days_to_process=days,
         dry_run=namespace.dry_run,
@@ -249,8 +282,8 @@ def args_to_cli_args(namespace: argparse.Namespace) -> CLIArgs:
         debug=namespace.debug,
         tag=namespace.tag or "",
         legacy=getattr(namespace, 'legacy', False),
-        search_dir=Path(namespace.input),
-        output_dir=Path(namespace.output),
-        symlinks_dir=Path(namespace.symlinks),
-        storage_dir=Path(namespace.storage),
+        search_dir=search_dir,
+        output_dir=output_dir,
+        symlinks_dir=symlinks_dir,
+        storage_dir=storage_dir,
     )

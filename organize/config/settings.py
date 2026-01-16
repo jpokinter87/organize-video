@@ -318,6 +318,16 @@ ANIMATION_SUBCATEGORIES: Dict[str, str] = {
 COMEDY_DRAMA_GENRE: str = 'Comédie dramatique'
 
 # =============================================================================
+# LOGGING
+# =============================================================================
+
+# Chemin du fichier de log
+LOG_FILE_PATH: str = 'organize.log'
+
+# Rotation du fichier de log
+LOG_ROTATION_SIZE: str = '100 MB'
+
+# =============================================================================
 # GESTION DE L'ÉTAT DE L'APPLICATION
 # =============================================================================
 
