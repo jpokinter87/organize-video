@@ -12,6 +12,7 @@ from organize.pipeline.main_processor import (
     query_movie_database,
     set_fr_title_and_category,
 )
+from organize.api.exceptions import APIConfigurationError, APIConnectionError
 from organize.config import GENRES, FILMANIM
 
 
@@ -139,7 +140,7 @@ class TestQueryMovieDatabase:
     @patch.dict('os.environ', {'TMDB_API_KEY': ''})
     def test_erreur_sans_api_key(self):
         """Lève une erreur si la clé API est manquante."""
-        with pytest.raises(RuntimeError, match="TMDB_API_KEY non configurée"):
+        with pytest.raises(APIConfigurationError, match="TMDB_API_KEY non configurée"):
             query_movie_database("Test", 2020, False, "test.mkv", "Films")
 
     @patch.dict('os.environ', {'TMDB_API_KEY': 'test_key'})
@@ -148,7 +149,7 @@ class TestQueryMovieDatabase:
     def test_utilise_cache(self, mock_confirm, mock_cache_class):
         """Utilise les données en cache si disponibles."""
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
         mock_cache.get_tmdb.return_value = {
             'total_results': 1,
             'results': [{
@@ -171,7 +172,7 @@ class TestQueryMovieDatabase:
     def test_appel_api_si_pas_cache(self, mock_confirm, mock_tmdb_class, mock_cache_class):
         """Appelle l'API si pas de cache."""
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
         mock_cache.get_tmdb.return_value = {}
 
         mock_tmdb = MagicMock()
@@ -197,14 +198,14 @@ class TestQueryMovieDatabase:
     def test_gere_api_none(self, mock_tmdb_class, mock_cache_class):
         """Lève une erreur si l'API retourne None."""
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
         mock_cache.get_tmdb.return_value = {}
 
         mock_tmdb = MagicMock()
         mock_tmdb_class.return_value = mock_tmdb
         mock_tmdb.find_content.return_value = None
 
-        with pytest.raises(ConnectionError, match="Connexion TMDB impossible"):
+        with pytest.raises(APIConnectionError, match="Connexion TMDB impossible"):
             query_movie_database("Test", 2020, False, "test.mkv", "Films")
 
     @patch.dict('os.environ', {'TMDB_API_KEY': 'test_key'})
@@ -213,7 +214,7 @@ class TestQueryMovieDatabase:
     def test_handle_not_found_si_pas_resultats(self, mock_handle_error, mock_cache_class):
         """Appelle handle_not_found_error si pas de résultats."""
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
         mock_cache.get_tmdb.return_value = {'total_results': 0, 'results': []}
 
         mock_handle_error.return_value = ("Film Manuel", ["Drame"], 2020)
@@ -229,7 +230,7 @@ class TestQueryMovieDatabase:
     def test_recherche_manuelle(self, mock_confirm, mock_cache_class):
         """Relance la recherche avec titre manuel."""
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
 
         # Premier appel retourne des résultats, l'utilisateur donne un titre manuel
         call_count = [0]
@@ -275,7 +276,7 @@ class TestSetFrTitleAndCategory:
     def test_traitement_film(self, mock_confirm, mock_cache_class):
         """Traite correctement un film."""
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
         mock_cache.get_tmdb.return_value = {
             'total_results': 1,
             'results': [{
@@ -306,7 +307,7 @@ class TestSetFrTitleAndCategory:
     def test_traitement_serie(self, mock_confirm, mock_cache_class):
         """Traite correctement une série (pas de classification)."""
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
         mock_cache.get_tmdb.return_value = {
             'total_results': 1,
             'results': [{
@@ -338,7 +339,7 @@ class TestSetFrTitleAndCategory:
     def test_restaure_specs_originales(self, mock_confirm, mock_cache_class):
         """Restaure les specs originales après traitement."""
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
         mock_cache.get_tmdb.return_value = {
             'total_results': 1,
             'results': [{
@@ -368,7 +369,7 @@ class TestSetFrTitleAndCategory:
     def test_skip_classification_genre_non_detecte(self, mock_confirm, mock_cache_class):
         """Ne classifie pas si genre est 'Non détecté'."""
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
         # Retourne un genre inconnu (99999) qui sera mappé vers N/A puis Non détecté
         mock_cache.get_tmdb.return_value = {
             'total_results': 1,

@@ -9,6 +9,12 @@ from organize.api.validation import (
     ensure_api_ready,
     get_api_key,
 )
+from organize.api.exceptions import (
+    APIError,
+    APIConfigurationError,
+    APIConnectionError,
+    APIResponseError,
+)
 
 __all__ = [
     "CacheDB",
@@ -19,4 +25,8 @@ __all__ = [
     "test_api_connectivity",
     "ensure_api_ready",
     "get_api_key",
+    "APIError",
+    "APIConfigurationError",
+    "APIConnectionError",
+    "APIResponseError",
 ]

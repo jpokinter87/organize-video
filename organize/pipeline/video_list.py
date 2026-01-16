@@ -19,7 +19,7 @@ from organize.utils.app_state import (
 )
 from organize.classification.type_detector import type_of_video, extract_file_infos
 from organize.filesystem.discovery import get_files
-from organize.pipeline.processor import create_paths
+from organize.pipeline.processor import create_paths, should_skip_duplicate
 
 # Console pour l'affichage
 console = Console()
@@ -47,16 +47,17 @@ def process_single_video(args: Tuple[Path, Path, Path, bool, bool]) -> Optional[
         video.type_file = type_of_video(file)
         video.extended_sub = Path(video.type_file) / "Séries TV" if video.is_serie() else Path("")
 
-        # Vérification des doublons seulement si pas en mode force et hash valide
-        if not force_mode and not dry_run and video.hash is not None:
-            video_db = select_db(file, storage_dir)
-            if hash_exists_in_db(video_db, video.hash):
+        # Vérification des doublons via la fonction partagée
+        video_db = select_db(file, storage_dir)
+
+        def check_hash_exists(hash_value: str) -> bool:
+            exists = hash_exists_in_db(video_db, hash_value)
+            if exists:
                 logger.info(f"Hash de {file.name} déjà présent dans {video_db.name}")
-                return None
-        elif dry_run:
-            logger.debug(f"SIMULATION - Vérification hash ignorée pour {file.name}")
-        elif video.hash is None:
-            logger.warning(f"Hash invalide pour {file.name}, traitement sans vérification de doublon")
+            return exists
+
+        if should_skip_duplicate(video.hash, force_mode, dry_run, check_hash_exists):
+            return None
 
         # Extraction des informations
         video.title, video.date_film, video.sequence, video.season, video.episode, video.spec = extract_file_infos(

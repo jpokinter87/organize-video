@@ -248,72 +248,69 @@ def _get_episode_title_from_tvdb(
         logger.warning("Clé API TVDB manquante, impossible de récupérer les titres d'épisodes")
         return video_obj, serial
 
-    cache = CacheDB()
+    with CacheDB() as cache:
+        # Vérifier le cache d'abord
+        cached_data = cache.get_tvdb(serial, video_obj.season, video_obj.episode)
+        if cached_data and cached_data.get("episodeName"):
+            episode_name = cached_data["episodeName"]
+            ext = video_obj.complete_path_original.suffix
+            video_obj.formatted_filename = (
+                f"{video_obj.title_fr} ({video_obj.date_film}) {video_obj.sequence} "
+                f"{episode_name} - {video_obj.spec}{ext}"
+            )
+            if dry_run:
+                logger.debug(f"SIMULATION - Titre épisode (cache): {episode_name}")
+            return video_obj, serial
 
-    # Vérifier le cache d'abord
-    cached_data = cache.get_tvdb(serial, video_obj.season, video_obj.episode)
-    if cached_data and cached_data.get("episodeName"):
-        episode_name = cached_data["episodeName"]
-        ext = video_obj.complete_path_original.suffix
-        video_obj.formatted_filename = (
-            f"{video_obj.title_fr} ({video_obj.date_film}) {video_obj.sequence} "
-            f"{episode_name} - {video_obj.spec}{ext}"
-        )
+        # Recherche réelle même en dry_run pour avoir les vrais titres
         if dry_run:
-            logger.debug(f"SIMULATION - Titre épisode (cache): {episode_name}")
-        cache.close()
-        return video_obj, serial
+            console.print(
+                f"[dim]🔍 Recherche du titre pour {video_obj.title_fr} S{video_obj.season:02d}E{video_obj.episode:02d}"
+                f"...[/dim]")
 
-    # Recherche réelle même en dry_run pour avoir les vrais titres
-    if dry_run:
-        console.print(
-            f"[dim]🔍 Recherche du titre pour {video_obj.title_fr} S{video_obj.season:02d}E{video_obj.episode:02d}"
-            f"...[/dim]")
+        databases = [
+            tvdb_api.Tvdb(apikey=TVDB_API_KEY, language='fr', interactive=False),
+            tvdb_api.Tvdb(apikey=TVDB_API_KEY, language='en', interactive=False)
+        ]
 
-    databases = [
-        tvdb_api.Tvdb(apikey=TVDB_API_KEY, language='fr', interactive=False),
-        tvdb_api.Tvdb(apikey=TVDB_API_KEY, language='en', interactive=False)
-    ]
+        for lang_index, data_serie in enumerate(databases):
+            try:
+                if not serial:
+                    try:
+                        serial = data_serie[video_obj.title_fr]['id']
+                        if dry_run:
+                            logger.debug(f"SIMULATION - Série trouvée avec ID: {serial}")
+                    except (tvdb_api.tvdb_shownotfound, KeyError):
+                        logger.debug(
+                            f"Série {video_obj.title_fr} non trouvée en {'français' if lang_index == 0 else 'anglais'}")
+                        continue
 
-    for lang_index, data_serie in enumerate(databases):
-        try:
-            if not serial:
-                try:
-                    serial = data_serie[video_obj.title_fr]['id']
+                data_episode = data_serie[serial][video_obj.season][video_obj.episode]
+                titre_episode = data_episode.get('episodeName', '')
+
+                if titre_episode:
+                    titre_episode = normalize(titre_episode)
+                    ext = video_obj.complete_path_original.suffix
+                    video_obj.formatted_filename = (
+                        f'{video_obj.title_fr} ({video_obj.date_film}) {video_obj.sequence} '
+                        f'{titre_episode} - {video_obj.spec}{ext}'
+                    )
+
+                    # Sauvegarder en cache
+                    cache.set_tvdb(serial, video_obj.season, video_obj.episode, {"episodeName": titre_episode})
+
                     if dry_run:
-                        logger.debug(f"SIMULATION - Série trouvée avec ID: {serial}")
-                except (tvdb_api.tvdb_shownotfound, KeyError):
-                    logger.debug(
-                        f"Série {video_obj.title_fr} non trouvée en {'français' if lang_index == 0 else 'anglais'}")
-                    continue
+                        console.print(f"[dim]✅ Trouvé: {titre_episode}[/dim]")
+                    break
 
-            data_episode = data_serie[serial][video_obj.season][video_obj.episode]
-            titre_episode = data_episode.get('episodeName', '')
+            except (tvdb_api.tvdb_shownotfound, tvdb_api.tvdb_episodenotfound,
+                    tvdb_api.tvdb_seasonnotfound) as e:
+                logger.warning(f'{video_obj.title_fr}: {type(e).__name__}')
+                continue
+            except Exception as e:
+                logger.warning(f'Erreur TVDB pour {video_obj.title_fr}: {e}')
+                continue
 
-            if titre_episode:
-                titre_episode = normalize(titre_episode)
-                ext = video_obj.complete_path_original.suffix
-                video_obj.formatted_filename = (
-                    f'{video_obj.title_fr} ({video_obj.date_film}) {video_obj.sequence} '
-                    f'{titre_episode} - {video_obj.spec}{ext}'
-                )
-
-                # Sauvegarder en cache
-                cache.set_tvdb(serial, video_obj.season, video_obj.episode, {"episodeName": titre_episode})
-
-                if dry_run:
-                    console.print(f"[dim]✅ Trouvé: {titre_episode}[/dim]")
-                break
-
-        except (tvdb_api.tvdb_shownotfound, tvdb_api.tvdb_episodenotfound,
-                tvdb_api.tvdb_seasonnotfound) as e:
-            logger.warning(f'{video_obj.title_fr}: {type(e).__name__}')
-            continue
-        except Exception as e:
-            logger.warning(f'Erreur TVDB pour {video_obj.title_fr}: {e}')
-            continue
-
-    cache.close()
     return video_obj, serial
 
 

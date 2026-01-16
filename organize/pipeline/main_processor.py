@@ -8,6 +8,7 @@ from loguru import logger
 from rich.console import Console
 from rich.panel import Panel
 
+from organize.api.exceptions import APIConfigurationError, APIConnectionError
 from organize.config import FILMANIM, GENRES, GENRE_UNDETECTED
 
 if TYPE_CHECKING:
@@ -76,25 +77,23 @@ def query_movie_database(
 
     if not TMDB_API_KEY:
         logger.error("Clé API TMDB manquante. Impossible de continuer.")
-        raise RuntimeError("TMDB_API_KEY non configurée")
+        raise APIConfigurationError("TMDB_API_KEY non configurée")
 
-    cache = CacheDB()
     cache_key = f"{type_video}-{name}-{date}"
-    cached_data = cache.get_tmdb(cache_key)
 
-    if cached_data:
-        json_data = cached_data
-    else:
-        base = Tmdb()
-        json_data = base.find_content(name, type_video)
-        if json_data is None:
-            logger.error("Impossible de se connecter à l'API TMDB.")
-            cache.close()
-            raise ConnectionError("Connexion TMDB impossible")
-        if json_data:
-            cache.set_tmdb(cache_key, json_data)
+    with CacheDB() as cache:
+        cached_data = cache.get_tmdb(cache_key)
 
-    cache.close()
+        if cached_data:
+            json_data = cached_data
+        else:
+            base = Tmdb()
+            json_data = base.find_content(name, type_video)
+            if json_data is None:
+                logger.error("Impossible de se connecter à l'API TMDB.")
+                raise APIConnectionError("Connexion TMDB impossible")
+            if json_data:
+                cache.set_tmdb(cache_key, json_data)
 
     if not json_data or json_data['total_results'] == 0:
         return handle_not_found_error(

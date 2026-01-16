@@ -17,6 +17,25 @@ if TYPE_CHECKING:
 _console = Console()
 
 
+def _safe_split_path(path_str: str, separator: str, default: str = "") -> str:
+    """
+    Divise un chemin de manière sécurisée et retourne la partie après le séparateur.
+
+    Args:
+        path_str: Chaîne du chemin à diviser.
+        separator: Séparateur à rechercher.
+        default: Valeur par défaut si le séparateur n'est pas trouvé.
+
+    Returns:
+        La partie du chemin après le séparateur, ou la valeur par défaut.
+    """
+    parts = path_str.split(separator, 1)
+    if len(parts) < 2:
+        logger.warning(f"Séparateur '{separator}' non trouvé dans le chemin: {path_str}")
+        return default
+    return parts[1]
+
+
 def move_file(source: Path, destination: Path, dry_run: bool = False) -> bool:
     """
     Déplace un fichier vers la destination avec gestion des doublons.
@@ -223,7 +242,7 @@ def rename_video(
         if video.is_not_doc():
             video.complete_path_temp_links = all_path / video.formatted_filename
         else:
-            _, end_path = str(video.complete_path_original).split(video.type_file, 1)
+            end_path = _safe_split_path(str(video.complete_path_original), video.type_file, video.complete_path_original.name)
             video.complete_path_temp_links = all_path / end_path.lstrip('/')
 
         logger.debug(f"SIMULATION - Déplacement: {video.destination_file} -> {video.complete_path_temp_links}")
@@ -235,7 +254,7 @@ def rename_video(
         if video.is_not_doc():
             video.complete_path_temp_links = all_path / video.formatted_filename
         else:
-            _, end_path = str(video.complete_path_original).split(video.type_file, 1)
+            end_path = _safe_split_path(str(video.complete_path_original), video.type_file, video.complete_path_original.name)
             video.complete_path_temp_links = all_path / end_path.lstrip('/')
 
         all_path.mkdir(parents=True, exist_ok=True)
@@ -270,10 +289,8 @@ def move_file_new_nas(
     """
     origine = video.complete_path_original
 
-    try:
-        sub_dir = str(video.complete_path_temp_links).split('work/', 1)[1]
-    except (IndexError, AttributeError):
-        sub_dir = str(video.complete_path_temp_links) if video.complete_path_temp_links else ''
+    default_sub_dir = str(video.complete_path_temp_links) if video.complete_path_temp_links else ''
+    sub_dir = _safe_split_path(str(video.complete_path_temp_links or ''), 'work/', default_sub_dir)
 
     destination = storage_dir / sub_dir
 
@@ -413,11 +430,28 @@ def handle_similar_file(
     _console.print(f"   [red]Existant:[/red] {'/'.join(existing_file_path.parts[-3:])}")
     _console.print(f"   [green]Nouveau:[/green] {new_file_path.name}")
 
-    choice = input("""Que souhaitez-vous faire ?
+    valid_choices = {"1", "2", "3"}
+    max_attempts = 3
+
+    for attempt in range(max_attempts):
+        try:
+            raw_input = input("""Que souhaitez-vous faire ?
     1: Garder l'ancien fichier (déplacer le nouveau vers attente)
     2: Remplacer par le nouveau (déplacer l'ancien vers attente)
     3: Conserver les deux
-Votre choix (1/2/3): """).strip()
+Votre choix (1/2/3): """)
+            # Sanitisation: strip, limite à 10 caractères, prend le premier caractère
+            choice = raw_input.strip()[:10]
+            if choice and choice[0] in valid_choices:
+                choice = choice[0]
+                break
+            _console.print(f"[red]Choix invalide. Veuillez entrer 1, 2 ou 3.[/red]")
+        except (EOFError, KeyboardInterrupt):
+            _console.print("\n[yellow]Interruption. Conservation des deux fichiers.[/yellow]")
+            return None
+    else:
+        _console.print("[red]Trop de tentatives invalides. Conservation des deux fichiers par défaut.[/red]")
+        return None
 
     match choice:
         case "1":

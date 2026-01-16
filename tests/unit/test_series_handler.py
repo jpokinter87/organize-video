@@ -273,7 +273,7 @@ class TestGetEpisodeTitleFromTvdb:
         from organize.pipeline.series_handler import _get_episode_title_from_tvdb
 
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
         mock_cache.get_tvdb.return_value = {"episodeName": "Titre Caché"}
 
         video = MagicMock()
@@ -323,7 +323,7 @@ class TestAddEpisodesTitles:
         from organize.pipeline.series_handler import add_episodes_titles
 
         mock_cache = MagicMock()
-        mock_cache_class.return_value = mock_cache
+        mock_cache_class.return_value.__enter__.return_value = mock_cache
         mock_cache.get_tvdb.return_value = {"episodeName": "Pilote"}
 
         video = MagicMock()

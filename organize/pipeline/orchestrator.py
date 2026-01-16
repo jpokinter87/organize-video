@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple
 from loguru import logger
 from tqdm import tqdm
 
+from organize.api.exceptions import APIError
 from organize.models.video import Video
 from organize.config import GENRE_UNDETECTED, UNDETECTED_PATHS
 
@@ -105,7 +106,7 @@ class PipelineOrchestrator:
                         media_info,
                         format_undetected_filename,
                     )
-                except (OSError, IOError, ValueError) as e:
+                except (OSError, IOError, ValueError, APIError) as e:
                     logger.error(f"Erreur lors du traitement de {video.complete_path_original.name}: {e}")
                     continue
 
