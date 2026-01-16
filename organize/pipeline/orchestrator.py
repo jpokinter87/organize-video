@@ -1,4 +1,4 @@
-"""Pipeline orchestration for video organization."""
+"""Orchestration du pipeline pour l'organisation de vidéos."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,11 +8,12 @@ from loguru import logger
 from tqdm import tqdm
 
 from organize.models.video import Video
+from organize.config import GENRE_UNDETECTED, UNDETECTED_PATHS
 
 
 @dataclass
 class ProcessingStats:
-    """Statistics from video processing."""
+    """Statistiques du traitement de vidéos."""
 
     films: int = 0
     series: int = 0
@@ -23,20 +24,20 @@ class ProcessingStats:
 
     @classmethod
     def from_videos(cls, videos: List[Video]) -> "ProcessingStats":
-        """Calculate statistics from a list of videos."""
+        """Calcule les statistiques à partir d'une liste de vidéos."""
         return cls(
             films=sum(1 for v in videos if v.is_film()),
             series=sum(1 for v in videos if v.is_serie() and v.title_fr),
             animation=sum(1 for v in videos if v.is_animation()),
             docs=sum(1 for v in videos if v.type_file in {'Docs', 'Docs#1'}),
-            undetected=sum(1 for v in videos if v.is_film_anim() and (not v.title_fr or v.genre == "Non detecte")),
+            undetected=sum(1 for v in videos if v.is_film_anim() and (not v.title_fr or v.genre == GENRE_UNDETECTED)),
             total=len(videos)
         )
 
 
 @dataclass
 class PipelineContext:
-    """Context for pipeline execution."""
+    """Contexte d'exécution du pipeline."""
 
     search_dir: Path
     storage_dir: Path
@@ -53,31 +54,31 @@ class PipelineContext:
 
 class PipelineOrchestrator:
     """
-    Orchestrates the video processing pipeline.
+    Orchestre le pipeline de traitement des vidéos.
 
-    Separates the main processing logic from CLI concerns,
-    making it easier to test and maintain.
+    Sépare la logique de traitement principale des préoccupations CLI,
+    facilitant ainsi les tests et la maintenance.
     """
 
     def __init__(self, context: PipelineContext):
         """
-        Initialize the orchestrator.
+        Initialise l'orchestrateur.
 
-        Args:
-            context: Pipeline execution context with directories and flags.
+        Arguments :
+            context: Contexte d'exécution avec répertoires et options.
         """
         self.context = context
         self._title_cache: Dict[str, Tuple] = {}
 
     def process_videos(self, videos: List[Video]) -> ProcessingStats:
         """
-        Process a list of videos through the pipeline.
+        Traite une liste de vidéos à travers le pipeline.
 
-        Args:
-            videos: List of Video objects to process.
+        Arguments :
+            videos: Liste d'objets Video à traiter.
 
-        Returns:
-            ProcessingStats with counts by type.
+        Retourne :
+            ProcessingStats avec les comptages par type.
         """
         from organize.classification import media_info, format_undetected_filename
         from organize.filesystem import (
@@ -122,7 +123,7 @@ class PipelineOrchestrator:
         media_info_fn,
         format_undetected_fn,
     ) -> None:
-        """Process a single video through the pipeline."""
+        """Traite une vidéo unique à travers le pipeline."""
         ctx = self.context
 
         # Process documentaries (simple path)
@@ -157,7 +158,7 @@ class PipelineOrchestrator:
             move_file_fn(processed_video, ctx.storage_dir, ctx.dry_run)
 
     def _apply_cached_metadata(self, video: Video, cache_key: str) -> None:
-        """Apply cached metadata to video."""
+        """Applique les métadonnées en cache à la vidéo."""
         (video.title_fr, video.date_film, video.genre,
          video.complete_dir_symlinks, video.sub_directory, cached_spec) = self._title_cache[cache_key]
 
@@ -176,20 +177,20 @@ class PipelineOrchestrator:
         media_info_fn,
         format_undetected_fn,
     ) -> None:
-        """Process a video that's not in cache."""
+        """Traite une vidéo qui n'est pas dans le cache."""
         ctx = self.context
         original_spec = video.spec
         video = set_fr_title_fn(video)
 
-        # Handle undetected films
+        # Gestion des films non détectés
         if (not video.title_fr or video.title_fr.strip() == '') and video.is_film_anim():
             video.title_fr = ""
             video.date_film = 0
-            video.genre = "Non detecte"
-            video.list_genres = ["Non detecte"]
+            video.genre = GENRE_UNDETECTED
+            video.list_genres = [GENRE_UNDETECTED]
             video.spec = original_spec
             video.formatted_filename = format_undetected_fn(video)
-            video.sub_directory = Path('Films/non detectes')
+            video.sub_directory = Path(UNDETECTED_PATHS.get('Films', 'Films/non détectés'))
             video.complete_dir_symlinks = find_directory_fn(
                 video, ctx.symlinks_dir / 'Films'
             )
@@ -216,10 +217,10 @@ class PipelineOrchestrator:
 
     def process_series_titles(self, videos: List[Video]) -> None:
         """
-        Add episode titles to series videos.
+        Ajoute les titres d'épisodes aux vidéos de séries.
 
-        Args:
-            videos: List of all processed videos.
+        Arguments :
+            videos: Liste de toutes les vidéos traitées.
         """
         from organize.pipeline import add_episodes_titles
         from organize.filesystem import cleanup_work_directory
@@ -238,7 +239,7 @@ class PipelineOrchestrator:
         )
 
     def finalize(self) -> None:
-        """Perform final operations (copy to destination, verify symlinks)."""
+        """Effectue les opérations finales (copie vers destination, vérification des symlinks)."""
         from organize.filesystem import copy_tree, verify_symlinks
 
         ctx = self.context

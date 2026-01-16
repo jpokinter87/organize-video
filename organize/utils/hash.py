@@ -1,4 +1,4 @@
-"""Hash utilities for file deduplication."""
+"""Utilitaires de hachage pour la déduplication de fichiers."""
 
 import hashlib
 from pathlib import Path
@@ -6,29 +6,28 @@ from typing import Optional
 
 from loguru import logger
 
-
-# Size threshold for full file hashing (650 KB)
-SMALL_FILE_THRESHOLD = 650000
-
-# Chunk size for partial hashing (512 KB)
-PARTIAL_HASH_CHUNK_SIZE = 524288
+from organize.config import (
+    SMALL_FILE_THRESHOLD,
+    PARTIAL_HASH_CHUNK_SIZE,
+    HASH_FILE_POSITION_DIVISOR,
+)
 
 
 def checksum_md5(filename: Path) -> Optional[str]:
     """
-    Calculate MD5 hash of a file.
+    Calcule le hash MD5 d'un fichier.
 
-    For small files (< 650KB), the entire file is hashed.
-    For larger files, only a 512KB chunk from 1/8 into the file is hashed.
-    This provides a good balance between accuracy and performance for
-    deduplication purposes.
+    Pour les petits fichiers (< 650 Ko), le fichier entier est haché.
+    Pour les fichiers plus gros, seul un chunk de 512 Ko à partir de 1/8
+    du fichier est haché. Cela offre un bon équilibre entre précision
+    et performance pour la déduplication.
 
-    Args:
-        filename: Path to the file to hash.
+    Arguments :
+        filename: Chemin vers le fichier à hacher.
 
-    Returns:
-        MD5 hex digest string, or None if file doesn't exist
-        or an error occurs.
+    Retourne :
+        Chaîne hexadécimale MD5, ou None si le fichier n'existe pas
+        ou si une erreur survient.
     """
     if not filename.exists():
         return None
@@ -41,8 +40,8 @@ def checksum_md5(filename: Path) -> Optional[str]:
             if size < SMALL_FILE_THRESHOLD:
                 md5.update(f.read())
             else:
-                # For large files, hash from 1/8 into the file
-                f.seek(size // 8)
+                # Pour les gros fichiers, hacher depuis 1/N du fichier
+                f.seek(size // HASH_FILE_POSITION_DIVISOR)
                 md5.update(f.read(PARTIAL_HASH_CHUNK_SIZE))
         return md5.hexdigest()
     except (OSError, IOError) as e:

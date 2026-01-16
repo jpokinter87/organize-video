@@ -1,7 +1,15 @@
-"""Configuration settings and constants for the organize package."""
+"""Configuration settings and constants for the organize package.
+
+Ce module centralise toutes les constantes et paramètres de configuration
+utilisés par l'application d'organisation de vidéos.
+"""
 
 from pathlib import Path
-from typing import Set, Dict
+from typing import Set, Dict, List, Tuple
+
+# =============================================================================
+# EXTENSIONS DE FICHIERS
+# =============================================================================
 
 # Video file extensions
 EXT_VIDEO: Set[str] = {
@@ -118,3 +126,190 @@ MAX_CLEANUP_ITERATIONS: int = 10
 
 # Sentinel value for "process all files"
 PROCESS_ALL_FILES_DAYS: float = 100000000.0
+
+# =============================================================================
+# CONSTANTES DE HACHAGE MD5
+# =============================================================================
+
+# Seuil de taille de fichier pour le hachage complet (650 Ko)
+SMALL_FILE_THRESHOLD: int = 650000
+
+# Taille du chunk pour le hachage partiel (512 Ko)
+PARTIAL_HASH_CHUNK_SIZE: int = 524288
+
+# Diviseur pour la position de lecture dans le fichier (1/8)
+HASH_FILE_POSITION_DIVISOR: int = 8
+
+# =============================================================================
+# CACHE ET BASE DE DONNÉES
+# =============================================================================
+
+# Taille maximale du cache LRU
+MAX_CACHE_SIZE: int = 1000
+
+# Nom du fichier de cache API
+CACHE_DB_FILENAME: str = 'cache.db'
+
+# Pattern de nom pour les bases de données de symlinks
+DATABASE_NAME_PATTERN: str = 'symlink_video_{category}.db'
+DATABASE_NAME_FILMS: str = 'symlink_video_Films.db'
+
+# =============================================================================
+# SEUILS DE RÉSOLUTION VIDÉO
+# =============================================================================
+
+# Seuils de résolution pour la détection de qualité (largeur, hauteur)
+RESOLUTION_THRESHOLDS: Dict[str, Tuple[int, int]] = {
+    '2160p': (3800, 2100),
+    '1080p': (1900, 1000),
+    '720p': (1200, 700),
+    'DVDRip': (700, 500),
+}
+
+# =============================================================================
+# CONSTANTES API
+# =============================================================================
+
+# TMDB
+TMDB_BASE_URL: str = 'https://api.themoviedb.org/3'
+TMDB_SEARCH_MOVIE_ENDPOINT: str = '/search/movie'
+TMDB_SEARCH_TV_ENDPOINT: str = '/search/tv'
+TMDB_DEFAULT_LANGUAGE: str = 'fr-FR'
+TMDB_USER_AGENT: str = (
+    'Mozilla/5.0 (Windows NT 6.0; WOW64; rv:24.0) '
+    'Gecko/20100101 Firefox/24.0'
+)
+
+# TVDB
+TVDB_LANGUAGES: List[str] = ['fr', 'en']
+TVDB_DEFAULT_LANGUAGE: str = 'fr'
+
+# =============================================================================
+# NORMALISATION DE TEXTE
+# =============================================================================
+
+# Articles à supprimer des titres (français et anglais)
+ARTICLES: List[str] = [
+    "L'", "Les ", "Le ", "La ", "Un ", "Une ",
+    "Des ", "Du ", "De ", "D'", "Au ", "Aux ",
+    "The ", "A ", "An ", "À "
+]
+
+# Mapping des caractères accentués vers ASCII
+ACCENT_MAP: Dict[str, str] = {
+    'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a',
+    'è': 'e', 'ê': 'e', 'ë': 'e', 'é': 'e',
+    'ì': 'i', 'î': 'i', 'ï': 'i', 'í': 'i',
+    'ò': 'o', 'ô': 'o', 'ö': 'o', 'ó': 'o',
+    'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
+    'ÿ': 'y', 'ý': 'y',
+    'ñ': 'n', 'ç': 'c',
+}
+
+# Ligatures à remplacer
+LIGATURE_MAP: Dict[str, str] = {
+    'œ': 'o',
+    'æ': 'a',
+}
+
+# Caractères spéciaux à remplacer dans les noms de fichiers
+SPECIAL_CHAR_REPLACEMENTS: Dict[str, str] = {
+    ':': ', ',
+    '?': '...',
+    '/': ' - ',
+}
+
+# Longueur minimale pour détecter un article au début d'un titre
+ARTICLE_DETECTION_MIN_LENGTH: int = 6
+
+# =============================================================================
+# NORMALISATION DES LANGUES ET CODECS
+# =============================================================================
+
+# Mapping de normalisation des langues
+LANGUAGE_MAPPING: Dict[str, str] = {
+    "vostfr": "VOSTFR",
+    "multi": "MULTi",
+    "french": "FR",
+    "truefrench": "TrueFrench",
+    "vo": "VO",
+    "en": "VO",
+    "fr": "FR",
+}
+
+# Mapping de normalisation des codecs
+CODEC_MAPPING: Dict[str, str] = {
+    "h264": "x264",
+    "x265": "HEVC",
+    "av1": "AV1",
+}
+
+# =============================================================================
+# PATTERNS REGEX POUR LA DÉTECTION DE MÉTADONNÉES
+# =============================================================================
+
+# Patterns de résolution
+RESOLUTION_PATTERNS: str = r'\b(1080p|720p|480p|2160p|4K|UHD)\b'
+
+# Patterns de source/qualité
+SOURCE_PATTERNS: str = r'\b(WEB|BluRay|BDRip|DVDRip|WEBRip|HDTV|WEB-DL)\b'
+
+# Patterns de codec audio
+AUDIO_CODEC_PATTERNS: str = r'\b(AC3|DTS|AAC|MP3|DD|DDPlus|Atmos)\b'
+
+# Patterns de codec vidéo
+VIDEO_CODEC_PATTERNS: str = r'\b(x264|x265|HEVC|H264|H265|AV1)\b'
+
+# =============================================================================
+# CONSTANTES D'INTERFACE UTILISATEUR
+# =============================================================================
+
+# Marqueur pour les fichiers non détectés
+GENRE_UNDETECTED: str = 'Non détecté'
+
+# Chemin des fichiers non détectés par catégorie
+UNDETECTED_PATHS: Dict[str, str] = {
+    'Films': 'Films/non détectés',
+    'Séries': 'Séries/non détectés',
+}
+
+# Nombre maximum de fichiers à afficher par dossier
+MAX_FILES_PER_FOLDER: int = 5
+
+# Format du dossier de saison
+SEASON_FOLDER_FORMAT: str = 'Saison {season:02d}'
+SEASON_FOLDER_REGEX: str = r'Saison \d{2}'
+
+# Texte d'aide pour les prompts interactifs
+INTERACTIVE_HELP_TEXT: str = 'm=manuel | v=visionner | s=skip | r=retry'
+
+# Valeur par défaut pour année inconnue
+YEAR_NOT_AVAILABLE: str = 'N/A'
+
+# Labels de langues pour l'affichage
+LANGUAGE_LABELS: Dict[str, str] = {
+    'fr': 'français',
+    'en': 'anglais',
+}
+
+# =============================================================================
+# LECTEURS VIDÉO PAR PLATEFORME
+# =============================================================================
+
+VIDEO_PLAYERS: Dict[str, List[str]] = {
+    'linux': ['mpv', 'vlc', 'mplayer', 'totem', 'xdg-open'],
+    'darwin': ['open', 'mpv', 'vlc'],
+    'windows': ['start', 'vlc', 'mpv'],
+}
+
+# =============================================================================
+# SOUS-CATÉGORIES D'ANIMATION
+# =============================================================================
+
+ANIMATION_SUBCATEGORIES: Dict[str, str] = {
+    'adult': 'Animation/Adultes',
+    'children': 'Animation/Animation Enfant',
+}
+
+# Combinaisons de genres spéciales
+COMEDY_DRAMA_GENRE: str = 'Comédie dramatique'

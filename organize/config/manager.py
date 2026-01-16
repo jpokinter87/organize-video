@@ -1,4 +1,4 @@
-"""Configuration management for video organization."""
+"""Gestion de la configuration pour l'organisation de vidéos."""
 
 import sys
 from dataclasses import dataclass
@@ -13,7 +13,7 @@ from organize.config.settings import CATEGORIES
 
 @dataclass
 class ValidationResult:
-    """Result of configuration validation."""
+    """Résultat d'une validation de configuration."""
 
     valid: bool
     error_message: Optional[str] = None
@@ -21,33 +21,33 @@ class ValidationResult:
 
 class ConfigurationManager:
     """
-    Manages application configuration and validation.
+    Gère la configuration et la validation de l'application.
 
-    Centralizes configuration parsing, validation, and setup
-    to reduce coupling in the main entry point.
+    Centralise l'analyse des arguments, la validation et la configuration
+    pour réduire le couplage dans le point d'entrée principal.
     """
 
     def __init__(self):
-        """Initialize configuration manager."""
+        """Initialise le gestionnaire de configuration."""
         self._cli_args: Optional[CLIArgs] = None
         self._console = None
 
     @property
     def cli_args(self) -> CLIArgs:
-        """Get parsed CLI arguments."""
+        """Retourne les arguments CLI analysés."""
         if self._cli_args is None:
             raise RuntimeError("Configuration not initialized. Call parse_args() first.")
         return self._cli_args
 
     def parse_args(self, args: Optional[list] = None) -> CLIArgs:
         """
-        Parse command-line arguments.
+        Analyse les arguments de ligne de commande.
 
-        Args:
-            args: Optional list of arguments (defaults to sys.argv).
+        Arguments :
+            args: Liste optionnelle d'arguments (défaut: sys.argv).
 
-        Returns:
-            Parsed CLIArgs instance.
+        Retourne :
+            Instance CLIArgs analysée.
         """
         namespace = parse_arguments(args)
         self._cli_args = args_to_cli_args(namespace)
@@ -55,10 +55,10 @@ class ConfigurationManager:
 
     def setup_logging(self, debug: bool = False) -> None:
         """
-        Configure logging with loguru.
+        Configure la journalisation avec loguru.
 
-        Args:
-            debug: Enable debug level logging if True.
+        Arguments :
+            debug: Active le niveau debug si True.
         """
         logger.remove()
 
@@ -77,10 +77,10 @@ class ConfigurationManager:
 
     def validate_input_directory(self) -> ValidationResult:
         """
-        Validate input directory exists.
+        Valide que le répertoire d'entrée existe.
 
-        Returns:
-            ValidationResult with status and optional error message.
+        Retourne :
+            ValidationResult avec statut et message d'erreur optionnel.
         """
         if not self.cli_args.search_dir.exists():
             return ValidationResult(
@@ -91,10 +91,10 @@ class ConfigurationManager:
 
     def validate_api_keys(self) -> ValidationResult:
         """
-        Validate API keys are present.
+        Valide que les clés API sont présentes.
 
-        Returns:
-            ValidationResult with status and optional error message.
+        Retourne :
+            ValidationResult avec statut et message d'erreur optionnel.
         """
         from organize.api import validate_api_keys as check_keys
 
@@ -107,10 +107,10 @@ class ConfigurationManager:
 
     def validate_api_connectivity(self) -> ValidationResult:
         """
-        Validate API connectivity.
+        Valide la connectivité aux APIs.
 
-        Returns:
-            ValidationResult with status and optional error message.
+        Retourne :
+            ValidationResult avec statut et message d'erreur optionnel.
         """
         from organize.api import test_api_connectivity
 
@@ -123,10 +123,10 @@ class ConfigurationManager:
 
     def validate_categories(self) -> Tuple[ValidationResult, list]:
         """
-        Validate category structure in search directory.
+        Valide la structure des catégories dans le répertoire de recherche.
 
-        Returns:
-            Tuple of (ValidationResult, list of available categories).
+        Retourne :
+            Tuple (ValidationResult, liste des catégories disponibles).
         """
         from organize.filesystem import get_available_categories
 
@@ -144,10 +144,10 @@ class ConfigurationManager:
 
     def validate_all(self) -> ValidationResult:
         """
-        Run all validations.
+        Exécute toutes les validations.
 
-        Returns:
-            ValidationResult with first failure or success.
+        Retourne :
+            ValidationResult avec le premier échec ou succès.
         """
         validations = [
             self.validate_input_directory,
@@ -165,10 +165,10 @@ class ConfigurationManager:
 
     def setup_working_directories(self) -> Tuple[Path, Path, Path, Path]:
         """
-        Setup working directories for processing.
+        Configure les répertoires de travail pour le traitement.
 
-        Returns:
-            Tuple of (work_dir, temp_dir, original_dir, waiting_folder).
+        Retourne :
+            Tuple (work_dir, temp_dir, original_dir, waiting_folder).
         """
         from organize.filesystem import setup_working_directories
 
@@ -179,17 +179,17 @@ class ConfigurationManager:
 
     def get_video_count(self) -> int:
         """
-        Count videos in search directory.
+        Compte les vidéos dans le répertoire de recherche.
 
-        Returns:
-            Number of videos found.
+        Retourne :
+            Nombre de vidéos trouvées.
         """
         from organize.filesystem import count_videos
 
         return count_videos(self.cli_args.search_dir)
 
     def flatten_series_directories(self) -> None:
-        """Flatten series directories if not in dry run mode."""
+        """Aplatit les répertoires de séries si pas en mode simulation."""
         from organize.filesystem import aplatir_repertoire_series
 
         if not self.cli_args.dry_run:
